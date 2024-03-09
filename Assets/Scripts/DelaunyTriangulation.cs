@@ -42,7 +42,7 @@ public struct DelaunayTriangulation2D
             float scaleInverse = 1f / scale;
             scaleCenter = (max + min) * 0.5f;
 
-            System.Span<Vector2> span = vertices.AsSpan();
+            Span<Vector2> span = vertices.AsSpan();
             foreach (ref Vector2 v in span)
             {
                 v = (v - scaleCenter) * scaleInverse;
@@ -83,5 +83,27 @@ public struct DelaunayTriangulation2D
         float d0 = Vector2.Dot(vertex - v0, n0);
         float d1 = Vector2.Dot(vertex - v1, n1);
         float d2 = Vector2.Dot(vertex - v2, n2);
+
+        ValueTuple<bool, bool> d0Res = IsPositiveOrNegativeIncludingZero(d0);
+        ValueTuple<bool, bool> d1Res = IsPositiveOrNegativeIncludingZero(d1);
+        ValueTuple<bool, bool> d2Res = IsPositiveOrNegativeIncludingZero(d2);
+
+        if (d0Res.Item1 == d1Res.Item1 == d2Res.Item1)
+            return true;
+        else if (d0Res.Item2 == d1Res.Item2 == d2Res.Item2)
+            return true;
+        else
+            return false;
+    }
+
+    public static ValueTuple<bool, bool> IsPositiveOrNegativeIncludingZero(float f)
+    {
+        if (Mathf.Approximately(f, 0f))
+            return new(true, true);
+        else
+        {
+            bool isPositive = 0f < f;
+            return new(isPositive, !isPositive);
+        }
     }
 }
