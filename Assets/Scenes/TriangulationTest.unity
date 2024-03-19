@@ -152,18 +152,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 337898731a078dc4ea34d8cc366f5444, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  vertices:
-  - {x: 1.72, y: 1.89}
-  - {x: 3.13, y: 0.49}
-  - {x: 0.99, y: 0.54}
-  output:
-  - {x: -0.31775692, y: 0.6542055}
-  - {x: 1.0000001, y: -0.6542056}
-  - {x: -0.9999999, y: -0.60747665}
-  - {x: 100, y: 0}
-  - {x: -50, y: 87}
-  - {x: -50, y: -87}
-  triangles: 030000000400000005000000030000000400000005000000030000000400000005000000030000000400000005000000
+  input:
+  - {x: 0, y: 1}
+  - {x: 1, y: 1.1}
+  - {x: 2, y: 1.2}
+  - {x: 0, y: 2}
+  - {x: 1, y: 2.1}
+  - {x: 2, y: 2.2}
+  vertices: []
+  triangles: 
+  constraintsInput:
+  - {x: 3, y: 5}
+  satisfiedConstraints: []
+  steps: 0
+  scroll: 1
+  scrollMode: 0
+  currentT: 
 --- !u!4 &552020883
 Transform:
   m_ObjectHideFlags: 0
@@ -173,7 +177,7 @@ Transform:
   m_GameObject: {fileID: 552020881}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 0, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}

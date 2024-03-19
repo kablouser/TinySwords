@@ -3,19 +3,24 @@ using UnityEngine;
 
 public class TriangulationTest : MonoBehaviour
 {
+    public List<Vector2> input;
     public List<Vector2> vertices;
-    public List<Vector2> output;
     public List<int> triangles;
+
+    public List<Vector2Int> constraintsInput;
+    public List<Vector2Int> satisfiedConstraints;
 
     public void OnDrawGizmos()
     {
-        if (vertices == null || output == null)
+        if (input == null || vertices == null || triangles == null || constraintsInput  == null || satisfiedConstraints == null)
             return;
+/*        else if (triangles.Count != adjacency.Count)
+            return;*/
 
         // input
         {
             Gizmos.color = Color.green;
-            foreach (var v in vertices)
+            foreach (var v in input)
             {
                 Gizmos.DrawSphere(v, 0.1f);
             }
@@ -23,29 +28,29 @@ public class TriangulationTest : MonoBehaviour
 
         // output
         {
-            Gizmos.color = Color.red;
+            Gizmos.color = Color.white;
             // verts
-            foreach (var v in output)
+            foreach (var v in vertices)
             {
                 Gizmos.DrawSphere(v, 0.15f);
             }
 
             // bounds
-            Gizmos.DrawLine(new Vector3(-1f, -1f), new Vector3(+1f, -1f));
-            Gizmos.DrawLine(new Vector3(+1f, -1f), new Vector3(+1f, +1f));
-            Gizmos.DrawLine(new Vector3(+1f, +1f), new Vector3(-1f, +1f));
-            Gizmos.DrawLine(new Vector3(-1f, +1f), new Vector3(-1f, -1f));
+            /*            Gizmos.DrawLine(new Vector3(-1f, -1f), new Vector3(+1f, -1f));
+                        Gizmos.DrawLine(new Vector3(+1f, -1f), new Vector3(+1f, +1f));
+                        Gizmos.DrawLine(new Vector3(+1f, +1f), new Vector3(-1f, +1f));
+                        Gizmos.DrawLine(new Vector3(-1f, +1f), new Vector3(-1f, -1f));*/
 
             // triangles
             if (triangles.Count % 3 != 0)
                 Debug.LogAssertionFormat(this, $"triangles is not multiple of 3! => {triangles.Count}");
 
-            Vector3Int drawTriangle = new Vector3Int();            
+            Vector3Int drawTriangle = new Vector3Int();
             for (int i = 0; i < triangles.Count; i++)
             {
                 int drawTriangleI = i % 3;
                 int vertexIndex = triangles[i];
-                if (!(0 <= vertexIndex && vertexIndex < output.Count))
+                if (!(0 <= vertexIndex && vertexIndex < vertices.Count))
                 {
                     Debug.LogAssertionFormat(this, $"vertex index is wrong => triangles[{i}]={vertexIndex}");
                     drawTriangle[drawTriangleI] = -1;
@@ -58,9 +63,34 @@ public class TriangulationTest : MonoBehaviour
                     drawTriangle.y != -1 &&
                     drawTriangle.z != -1)
                 {
-                    Gizmos.DrawLine(output[drawTriangle.x], output[drawTriangle.y]);
-                    Gizmos.DrawLine(output[drawTriangle.y], output[drawTriangle.z]);
-                    Gizmos.DrawLine(output[drawTriangle.z], output[drawTriangle.x]);
+                    GizmosMore.DrawTriangle(vertices[drawTriangle.x],
+                                            vertices[drawTriangle.y],
+                                            vertices[drawTriangle.z]);
+                }
+            }
+        }
+
+        // constraints
+        if (scroll % 2 == 1)
+        {            
+/*            foreach(var c in constraintsInput)
+            {
+                if (0 <= c.x && c.x < vertices.Count &&
+                    0 <= c.y && c.y < vertices.Count)
+                {
+                    Gizmos.color = satisfiedConstraints.Contains(c) ?
+                        Color.green : Color.red;
+                    GizmosMore.DrawArrow(vertices[c.x], vertices[c.y]);                       
+                }
+            }*/
+
+            foreach (var c in satisfiedConstraints)
+            {
+                if (0 <= c.x && c.x < vertices.Count &&
+                    0 <= c.y && c.y < vertices.Count)
+                {
+                    Gizmos.color = Color.green;
+                    GizmosMore.DrawArrow(vertices[c.x], vertices[c.y]);
                 }
             }
         }
@@ -70,10 +100,69 @@ public class TriangulationTest : MonoBehaviour
     public void Run()
     {
         UnityEditor.Undo.RecordObject(this, "TriangulationTest");
-        output = new List<Vector2>(vertices);
+        vertices = new List<Vector2>(input);
         if (triangles == null)
             triangles = new List<int>();
+        //DelaunayTriangulation2D.Triangulate(output, triangles);
+    }
 
-        DelaunayTriangulation2D.Triangulate(output, triangles);
+    public int steps = 0;
+    public int scroll = 0;
+    public bool scrollMode = false;
+
+    public string currentT;
+
+    public void Start()
+    {
+/*        int size = Random.Range(10,10) * 3;
+        input = new List<Vector2>(size);
+        for (int i = 0; i < size; ++i)
+        {
+            input.Add(new Vector2(Mathf.Round(Random.value * 4f - 2f), Mathf.Round(Random.value * 4f - 2f)));
+        }*/
+
+        /*        input = new List<Vector2> {
+                    new Vector2(0, 0),            
+                    new Vector2(1, 1),            
+                    new Vector2(1, 0),
+
+                    new Vector2(0, 2),
+                    new Vector2(1, 2),
+                    new Vector2(1, 2),
+
+                    new Vector2(0, 1),
+                    new Vector2(1, 1),
+                    new Vector2(1, 1),
+        };*/
+    }
+
+    public void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.M))
+        {
+            scrollMode = !scrollMode;
+        }
+
+        if (Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.S))
+        {
+            if (Input.GetKeyDown(KeyCode.A))
+                steps++;
+            else
+                steps--;
+
+            vertices = new List<Vector2>(input);
+            if (satisfiedConstraints == null)
+                satisfiedConstraints = new List<Vector2Int>();
+            DelaunayTriangulation2D.Triangulate(vertices, triangles, constraintsInput, steps, satisfiedConstraints);
+        }
+
+        if (0.1f < Input.mouseScrollDelta.y)
+        {
+            --scroll;
+        }
+        else if (Input.mouseScrollDelta.y < -0.1f)
+        {
+            ++scroll;
+        }
     }
 }
