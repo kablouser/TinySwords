@@ -97,10 +97,11 @@ public struct DelaunayTriangulation2D
             triangles.Add(vertices.Count - 1);
         }
 
+        // adjacency[triangleIndex] = adjacentTriangle
+        List<int> adjacency;
         // find triangle 
         {
-            // adjacency[vertexIndexOppositeSide] = adjacentTriangle
-            List<int> adjacency = new List<int>(expectedTrianglesCount)
+            adjacency = new List<int>(expectedTrianglesCount)
             {
                 -1, -1, -1
             };
@@ -310,6 +311,10 @@ public struct DelaunayTriangulation2D
             steps--;
             vertices.RemoveRange(vertices.Count - 3, 3);
 
+            //TODO remove after debugging
+            List<int> offsets = new List<int>(triangles.Count);
+            int currentOffset = 0;
+
             for (int i = 0; i + 2 < triangles.Count; i += 3)
             {
                 if (vertices.Count <= triangles[i] ||
@@ -318,8 +323,30 @@ public struct DelaunayTriangulation2D
                 {
                     triangles.RemoveRange(i, 3);
                     i -= 3;
+
+                    currentOffset -= 3;
+                }
+
+                offsets.Add(currentOffset);
+                offsets.Add(currentOffset);
+                offsets.Add(currentOffset);
+            }
+
+            while(offsets.Count < adjacency.Count)
+            {
+                offsets.Add(currentOffset);
+            }
+
+            for (int i = 0; i < triangles.Count; i++)
+            {
+                int adj = adjacency[i];
+                if (adj != -1)
+                {
+                    adjacency[i] = adj + offsets[adj];
                 }
             }
+            if (triangles.Count < adjacency.Count)
+                adjacency.RemoveRange(triangles.Count, adjacency.Count - triangles.Count);
         }
 
         // constraint
@@ -399,12 +426,15 @@ public struct DelaunayTriangulation2D
                 Vector2 edgeDirection = yVertex - xVertex;
 
                 bool foundParallel = false;
-                while (0 < searchingParallelEdges.Count && !foundParallel)
+                while (0 < searchingParallelEdges.Count && !foundParallel && 0 < steps)
                 {
-                    int neighbourTriangleIndex = searchingParallelEdges[searchingParallelEdges.Count - 1];
+                    steps--;
+                    int triangleIndex = searchingParallelEdges[searchingParallelEdges.Count - 1];
                     searchingParallelEdges.RemoveAt(searchingParallelEdges.Count - 1);
-                    int vertexIndex = trianglesSpan[neighbourTriangleIndex];
-                    Vector2 vertex = verticesSpan[trianglesSpan[neighbourTriangleIndex]];
+                    int vertexIndex = trianglesSpan[triangleIndex];
+                    Vector2 vertex = verticesSpan[trianglesSpan[triangleIndex]];
+
+                    satisfiedEdges.Add(new Vector2Int(constrainedEdge.x, vertexIndex));
 
                     if (Mathf.Abs(Cross(vertex - xVertex, edgeDirection)) < 1E-05 &&
                         0f < Vector2.Dot(vertex - xVertex, edgeDirection))
@@ -417,27 +447,37 @@ public struct DelaunayTriangulation2D
                             break;
                         }
 
-                        // TODO improve search by rotating around v0 instead
-                        for (int edge = 0; edge < triangles.Count; edge++)
+                        // rotate around adjacent neighbours to find parallel edge
+                        for (int edge = 0; edge < 3; edge++)
                         {
-                            if (trianglesSpan[edge] == vertexIndex)
-                            {
-                                int face = edge / 3 * 3;
-                                int edge0 = face + (edge + 0) % 3;
-                                int edge1 = face + (edge + 1) % 3;
-                                int edge2 = face + (edge + 2) % 3;
+                            int face = vertexIndex / 3 * 3;
+                            int adjacentTriangle = adjacency[face + (edge % 3)];
 
-                                if (searchedParallelEdges.Add(edge0))
+                            if (adjacentTriangle != -1)
+                            {
+                                for (int adjacentTriangleEdge = adjacentTriangle; adjacentTriangleEdge < adjacentTriangle + 3; adjacentTriangleEdge++)
                                 {
-                                    searchingParallelEdges.Add(edge0);
-                                }
-                                if (searchedParallelEdges.Add(edge1))
-                                {
-                                    searchingParallelEdges.Add(edge1);
-                                }
-                                if (searchedParallelEdges.Add(edge2))
-                                {
-                                    searchingParallelEdges.Add(edge2);
+                                    if (trianglesSpan[adjacentTriangleEdge] == vertexIndex)
+                                    {
+                                        int adjacentFace = adjacentTriangleEdge / 3 * 3;
+                                        int edge0 = adjacentFace + (adjacentTriangleEdge + 0) % 3;
+                                        int edge1 = adjacentFace + (adjacentTriangleEdge + 1) % 3;
+                                        int edge2 = adjacentFace + (adjacentTriangleEdge + 2) % 3;
+
+                                        if (searchedParallelEdges.Add(edge0))
+                                        {
+                                            searchingParallelEdges.Add(edge0);
+                                        }
+                                        if (searchedParallelEdges.Add(edge1))
+                                        {
+                                            searchingParallelEdges.Add(edge1);
+                                        }
+                                        if (searchedParallelEdges.Add(edge2))
+                                        {
+                                            searchingParallelEdges.Add(edge2);
+                                        }
+                                        break;
+                                    }
                                 }
                             }
                         }
@@ -446,14 +486,14 @@ public struct DelaunayTriangulation2D
 
                 if (foundParallel)
                 {
-                    satisfiedEdges.Add(constrainedEdge);
+                    //satisfiedEdges.Add(constrainedEdge);
                     continue;
                 }
             }
         }
 
-
-        if (0 < steps) {
+        if (0 < steps)
+        {
             steps--;
             Span<Vector2> span = vertices.AsSpan();
             foreach (ref Vector2 v in span)
