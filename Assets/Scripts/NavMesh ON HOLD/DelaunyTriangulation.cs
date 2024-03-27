@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UIElements;
+
 public struct DelaunayTriangulation2D
 {
     public static void Triangulate(
@@ -8,11 +10,12 @@ public struct DelaunayTriangulation2D
         List<Vector2Int> constrainedEdges,
         //DEBUG TODO REMOVE
         int steps,
-        List<Vector2Int> satisfiedEdges
+        List<Vector2Int> intersectingEdges,
+        List<int> adjacency
         )
     {
         triangles.Clear();
-        satisfiedEdges.Clear();
+        intersectingEdges.Clear();
 
         if (vertices.Count <= 2) return;
 
@@ -98,13 +101,17 @@ public struct DelaunayTriangulation2D
         }
 
         // adjacency[triangleIndex] = adjacentTriangle
-        List<int> adjacency;
+        //List<int> adjacency;
         // find triangle 
         {
-            adjacency = new List<int>(expectedTrianglesCount)
-            {
-                -1, -1, -1
-            };
+            /*            adjacency = new List<int>(expectedTrianglesCount)
+                        {
+                            -1, -1, -1
+                        };*/
+            adjacency.Clear();
+            adjacency.Add(-1);
+            adjacency.Add(-1);
+            adjacency.Add(-1);
 
             Stack<int> dirtyTriangles = new Stack<int>(expectedTrianglesCount);
             // vertices no more Add()
@@ -192,7 +199,7 @@ public struct DelaunayTriangulation2D
                         // top left triangle
                         adjacency[triangle] = oldAdjacency.z;
                         adjacency[triangle + 1] = bottomTriangle;
-                        adjacency[triangle + 2] = topRightTriangle; 
+                        adjacency[triangle + 2] = topRightTriangle;
                         // bottom triangle
                         adjacency.Add(oldAdjacency.x);
                         adjacency.Add(topRightTriangle);
@@ -312,7 +319,7 @@ public struct DelaunayTriangulation2D
             vertices.RemoveRange(vertices.Count - 3, 3);
 
             //TODO remove after debugging
-            List<int> offsets = new List<int>(triangles.Count);
+            List<int> offsets = new List<int>(triangles.Count / 3);
             int currentOffset = 0;
 
             for (int i = 0; i + 2 < triangles.Count; i += 3)
@@ -322,27 +329,32 @@ public struct DelaunayTriangulation2D
                     vertices.Count <= triangles[i + 2])
                 {
                     triangles.RemoveRange(i, 3);
+                    adjacency.RemoveRange(i, 3);
                     i -= 3;
 
                     currentOffset -= 3;
+                    offsets.Add(-1);
                 }
-
-                offsets.Add(currentOffset);
-                offsets.Add(currentOffset);
-                offsets.Add(currentOffset);
+                else
+                {
+                    offsets.Add(currentOffset);
+                }
             }
 
-            while(offsets.Count < adjacency.Count)
-            {
-                offsets.Add(currentOffset);
-            }
-
-            for (int i = 0; i < triangles.Count; i++)
+            for (int i = 0; i < adjacency.Count; i++)
             {
                 int adj = adjacency[i];
                 if (adj != -1)
                 {
-                    adjacency[i] = adj + offsets[adj];
+                    int off = offsets[adj / 3];
+                    if (off == -1)
+                    {
+                        adjacency[i] = -1;
+                    }
+                    else
+                    {
+                        adjacency[i] = adj + off;
+                    }
                 }
             }
             if (triangles.Count < adjacency.Count)
@@ -352,21 +364,14 @@ public struct DelaunayTriangulation2D
         // constraint
         {
             Span<Vector2Int> constrainedEdgesSpan = constrainedEdges.AsSpan();
-            Span<Vector2> verticesSpan = vertices.AsSpan();
-            Span<int> trianglesSpan = triangles.AsSpan();
 
-
-            HashSet<int> searchedParallelEdges = new HashSet<int>(8);
-            List<int> searchingParallelEdges = new List<int>(8);
-
-            List<int> traverseEdges = new List<int>(8);
+            Stack<int> visitTriangles = new Stack<int>(16);
+            HashSet<int> visitedTriangles = new HashSet<int>(16);
 
             foreach (ref Vector2Int constrainedEdge in constrainedEdgesSpan)
             {
                 if (steps > 0)
-                {
                     steps--;
-                }
                 else
                     break;
 
@@ -379,116 +384,73 @@ public struct DelaunayTriangulation2D
                     continue;
                 }
 
-                searchedParallelEdges.Clear();
-                searchingParallelEdges.Clear();
-                traverseEdges.Clear();
-
+                Vector2Int constrainedEdgePossiblySwapped = new Vector2Int();
+                int startTriangleIndex = -1;
+                for (int i = 0; i < triangles.Count; i++)
                 {
-                    int matchCountPerTriangle = 0;
-                    for (int edge = 0; edge < triangles.Count && matchCountPerTriangle < 2; edge++)
+                    int vertexIndex = triangles[i];
+                    if (vertexIndex == constrainedEdge.x)
                     {
-                        if (edge % 3 == 0)
-                        {
-                            matchCountPerTriangle = 0;
-                        }
-
-                        int vertexIndex = trianglesSpan[edge];
-                        if (vertexIndex == constrainedEdge.x)
-                        {
-                            int face = edge / 3 * 3;
-                            int edge0 = face + (edge + 1) % 3;
-                            int edge1 = face + (edge + 2) % 3;
-
-                            searchedParallelEdges.Add(edge0);
-                            searchedParallelEdges.Add(edge1);
-
-                            searchingParallelEdges.Add(edge0);
-                            searchingParallelEdges.Add(edge1);
-
-                            matchCountPerTriangle++;
-                        }
-                        else if (vertexIndex == constrainedEdge.y)
-                        {
-                            matchCountPerTriangle++;
-                        }
+                        constrainedEdgePossiblySwapped = constrainedEdge;
+                        startTriangleIndex = i;
+                        break;
                     }
-                    if (2 <= matchCountPerTriangle)
+                    else if(vertexIndex == constrainedEdge.y)
                     {
-                        satisfiedEdges.Add(constrainedEdge);
-                        continue;
+                        constrainedEdgePossiblySwapped = new Vector2Int(constrainedEdge.y, constrainedEdge.x);
+                        startTriangleIndex = i;
+                        break;
                     }
                 }
 
-                traverseEdges.AddRange(searchingParallelEdges);
-
-                Vector2 xVertex = verticesSpan[constrainedEdge.x];
-                Vector2 yVertex = verticesSpan[constrainedEdge.y];
-                Vector2 edgeDirection = yVertex - xVertex;
-
-                bool foundParallel = false;
-                while (0 < searchingParallelEdges.Count && !foundParallel && 0 < steps)
+                if (startTriangleIndex != -1)
                 {
-                    steps--;
-                    int triangleIndex = searchingParallelEdges[searchingParallelEdges.Count - 1];
-                    searchingParallelEdges.RemoveAt(searchingParallelEdges.Count - 1);
-                    int vertexIndex = trianglesSpan[triangleIndex];
-                    Vector2 vertex = verticesSpan[trianglesSpan[triangleIndex]];
-
-                    satisfiedEdges.Add(new Vector2Int(constrainedEdge.x, vertexIndex));
-
-                    if (Mathf.Abs(Cross(vertex - xVertex, edgeDirection)) < 1E-05 &&
-                        0f < Vector2.Dot(vertex - xVertex, edgeDirection))
+                    IntersectConstrainedEdge intersectConstrainedEdge = new IntersectConstrainedEdge
                     {
-                        // exactly parallel, traverse edge
-                        if (vertexIndex == constrainedEdge.y)
-                        {
-                            // found parallel line
-                            foundParallel = true;
-                            break;
-                        }
+                        vertices = vertices,
+                        triangles = triangles,
+                        adjacency = adjacency,
 
-                        // rotate around adjacent neighbours to find parallel edge
-                        for (int edge = 0; edge < 3; edge++)
-                        {
-                            int face = vertexIndex / 3 * 3;
-                            int adjacentTriangle = adjacency[face + (edge % 3)];
+                        constrainedEdgeIndices = constrainedEdgePossiblySwapped,
+                        constrainedVertex0 = vertices[constrainedEdgePossiblySwapped.x],
+                        constrainedVertex1 = vertices[constrainedEdgePossiblySwapped.y],
+                        constrainedEdge = vertices[constrainedEdgePossiblySwapped.y] - vertices[constrainedEdgePossiblySwapped.x],
 
-                            if (adjacentTriangle != -1)
-                            {
-                                for (int adjacentTriangleEdge = adjacentTriangle; adjacentTriangleEdge < adjacentTriangle + 3; adjacentTriangleEdge++)
-                                {
-                                    if (trianglesSpan[adjacentTriangleEdge] == vertexIndex)
-                                    {
-                                        int adjacentFace = adjacentTriangleEdge / 3 * 3;
-                                        int edge0 = adjacentFace + (adjacentTriangleEdge + 0) % 3;
-                                        int edge1 = adjacentFace + (adjacentTriangleEdge + 1) % 3;
-                                        int edge2 = adjacentFace + (adjacentTriangleEdge + 2) % 3;
+                        visitTriangles = visitTriangles,
+                        visitedTriangles = visitedTriangles,
 
-                                        if (searchedParallelEdges.Add(edge0))
-                                        {
-                                            searchingParallelEdges.Add(edge0);
-                                        }
-                                        if (searchedParallelEdges.Add(edge1))
-                                        {
-                                            searchingParallelEdges.Add(edge1);
-                                        }
-                                        if (searchedParallelEdges.Add(edge2))
-                                        {
-                                            searchingParallelEdges.Add(edge2);
-                                        }
-                                        break;
-                                    }
-                                }
-                            }
-                        }
+                        isEnded = false,
+                        nextAroundTriangleIndex = startTriangleIndex,
+                        nextSkipLambda = 0,
+
+                        steps = steps,
+                        intersectingEdges = intersectingEdges,
+                    };
+
+                    visitTriangles.Clear();
+                    visitedTriangles.Clear();
+
+                    do
+                    {
+                        intersectConstrainedEdge.isEnded = true;
+                        RotateAroundVertex(
+                            triangles,
+                            adjacency,
+                            visitTriangles,
+                            visitedTriangles,
+                            intersectConstrainedEdge.nextAroundTriangleIndex,                            
+                            ref intersectConstrainedEdge,
+                            intersectConstrainedEdge.nextSkipLambda);
+                        steps = intersectConstrainedEdge.steps;
                     }
+                    while (!intersectConstrainedEdge.isEnded);
                 }
 
-                if (foundParallel)
+                /*if (foundParallel)
                 {
                     //satisfiedEdges.Add(constrainedEdge);
                     continue;
-                }
+                }*/
             }
         }
 
@@ -507,7 +469,7 @@ public struct DelaunayTriangulation2D
 
     public static bool IsInTriangle(in Vector2 vertex, List<Vector2> vertices, List<int> triangles, int triangleIndex)
     {
-        Span<int> triangleSpan = triangles.AsSpan().Slice(triangleIndex, 3);         
+        Span<int> triangleSpan = triangles.AsSpan().Slice(triangleIndex, 3);
         Span<Vector2> verticesSpan = vertices.AsSpan();
 
         ref Vector2 v0 = ref verticesSpan[triangleSpan[0]];
@@ -560,14 +522,14 @@ public struct DelaunayTriangulation2D
     }
 
     // Does line seg [a1, b1] intersect [a2, b2]
-    public static bool IsLinesIntersect(in Vector2 a1, in Vector2 b1, in Vector2 a2, in Vector2 b2)
+    public static bool IsLinesIntersect(in Vector2 line0Begin, in Vector2 line0End, in Vector2 line1Begin, in Vector2 line1End)
     {
-        Vector2 a1b1 = b1 - a1;
-        Vector2 b1b2 = b2 - b1;
-        Vector2 b1a2 = a2 - b1;
-        Vector2 a2b2 = b2 - a2;
-        Vector2 b2b1 = b1 - b2;
-        Vector2 b2a1 = a1 - b2;
+        Vector2 a1b1 = line0End - line0Begin;
+        Vector2 b1b2 = line1End - line0End;
+        Vector2 b1a2 = line1Begin - line0End;
+        Vector2 a2b2 = line1End - line1Begin;
+        Vector2 b2b1 = line0End - line1End;
+        Vector2 b2a1 = line0Begin - line1End;
         return
             Cross(a1b1, b1b2) * Cross(a1b1, b1a2) < 0f &&
             Cross(a2b2, b2b1) * Cross(a2b2, b2a1) < 0f;
@@ -598,5 +560,214 @@ public struct DelaunayTriangulation2D
             abCross == bcCross &&
             bcCross == cdCross &&
             cdCross == daCross;
+    }
+
+    public interface IRotateAroundVertex { public void Run(int triangleIndex, int vertexIndex); }
+    public static void RotateAroundVertex<TLambda>(List<int> triangles, List<int> adjacency, Stack<int> visitTriangles, HashSet<int> visitedTriangles, int aroundTriangleIndex, ref TLambda lambda, int skipLambda)
+        where TLambda : IRotateAroundVertex
+    {
+        //visitTriangles.Clear();
+        visitTriangles.Push(aroundTriangleIndex / 3 * 3);
+
+        //visitedTriangles.Clear();
+        visitedTriangles.Add(aroundTriangleIndex / 3 * 3);
+
+        int aroundVertexIndex = triangles[aroundTriangleIndex];
+
+        while (visitTriangles.TryPeek(out int visitTriangle))
+        {
+            bool isAroundVertex = false;
+
+            // execute lambda if triangle contains aroundVertexIndex
+            for (int i = visitTriangle; i < visitTriangle + 3; i++)
+            {
+                int vertexIndex = triangles[i];
+                if (vertexIndex == aroundVertexIndex)
+                {
+                    if (0 < skipLambda)
+                    {
+                        skipLambda--;
+                    }
+                    else
+                    {
+                        lambda.Run(i, vertexIndex);
+                    }
+                    isAroundVertex = true;
+                    break;
+                }
+            }
+
+            // allow lambda to control flow
+            if (visitTriangles.Count == 0)
+                return;
+            visitTriangles.Pop();
+
+            if (!isAroundVertex)
+                continue;
+
+            // visit all neighbour triangles
+            for (int i = visitTriangle; i < visitTriangle + 3; i++)
+            {
+                int adjacentTriangle = adjacency[i];
+                if (adjacentTriangle != -1 && visitedTriangles.Add(adjacentTriangle))
+                {
+                    visitTriangles.Push(adjacentTriangle);
+                }
+            }
+        }
+    }
+
+    public struct IntersectConstrainedEdge : IRotateAroundVertex
+    {
+        public List<Vector2> vertices;
+        public List<int> triangles;
+        public List<int> adjacency;
+
+        public Vector2Int constrainedEdgeIndices;
+        public Vector2 constrainedVertex0;
+        public Vector2 constrainedVertex1;
+        public Vector2 constrainedEdge;
+
+        public Stack<int> visitTriangles;
+        public HashSet<int> visitedTriangles;
+
+        public bool isEnded;
+        public int nextAroundTriangleIndex;
+        public int nextSkipLambda;
+
+        public int steps;
+        public List<Vector2Int> intersectingEdges;
+
+        public void Run(int triangleIndex, int _)
+        {
+            if (steps <= 0)
+                return;
+            steps--;
+
+            int triangleBaseIndex = triangleIndex / 3 * 3;
+            Span<Vector2> triangleVertices = stackalloc Vector2[3];
+
+            // get vertex positions
+            for (int i = 0; i < 3; i++)
+            {
+                int vertexIndex = triangles[triangleBaseIndex + i];
+                if (vertexIndex == constrainedEdgeIndices.y)
+                {
+                    isEnded = true;
+                    visitTriangles.Clear();
+                    return;
+                }
+                triangleVertices[i] = vertices[vertexIndex];
+            }
+
+            // find parallel vert furthest away from edge.x
+            {
+                int bestParallelI = -1;
+                float bestParallelDistance = 0f;
+                for (int i = 0; i < 3; i++)
+                {
+                    ref Vector2 triangleVertex = ref triangleVertices[i];
+                    Vector2 constrainedV0ToVertex = triangleVertex - constrainedVertex0;
+
+                    // is parallel and points in the same direction
+                    if (Mathf.Abs(Cross(constrainedV0ToVertex, constrainedEdge)) < 1E-05 &&
+                        0f < Vector2.Dot(constrainedV0ToVertex, constrainedEdge))
+                    {
+                        float sqrMagnitude = constrainedV0ToVertex.sqrMagnitude;
+                        if (bestParallelDistance < sqrMagnitude)
+                        {
+                            bestParallelI = i;
+                            bestParallelDistance = sqrMagnitude;
+                        }
+                    }
+                }
+
+                // if not visited
+                // if parallel exists, rotate around bestParallelI, go to neighbours
+                if (bestParallelI != -1 && visitedTriangles.Add(triangleBaseIndex + bestParallelI))
+                {
+                    // TODO need to stop checking equal vertexIndex for this triangleIndex!
+
+                    nextAroundTriangleIndex = triangleBaseIndex + bestParallelI;
+                    // lambda will be run on this exact triangleBaseIndex again, but we want the neighbours
+                    nextSkipLambda = 1;
+                    // continue outer loop around this best parallel vertex
+                    isEnded = false;
+                    visitTriangles.Clear();
+                    return;
+                }
+            }
+
+            // find find intersecting edges furthest away from edge.x
+            {
+                int bestIntersectI = -1;
+                float bestIntersectDistance = 0f;
+                for (int i = 0; i < 3; i++)
+                {
+                    ref Vector2 v0 = ref triangleVertices[i];
+                    ref Vector2 v1 = ref triangleVertices[(i + 1) % 3];
+                    Vector2 edge = v1 - v0;
+
+                    if (IsLinesIntersect(v0, v1, constrainedVertex0, constrainedVertex1))
+                    {
+                        float intersectDistance = Mathf.Max((v0 - constrainedVertex0).sqrMagnitude, (v1 - constrainedVertex0).sqrMagnitude);
+                        if (bestIntersectDistance < intersectDistance)
+                        {
+                            bestIntersectI = i;
+                            bestIntersectDistance = intersectDistance;
+                        }
+                    }
+                }
+                                
+                if (bestIntersectI != -1)
+                {
+                    // other i in intersect edge
+                    int bestIntersectI1 = (bestIntersectI + 1) % 3;
+                    // i not in edge
+                    int awayI = (bestIntersectI + 2) % 3;
+
+                    int adjacentTriangle = adjacency[triangleBaseIndex + awayI];
+                    if (adjacentTriangle != -1)
+                    {
+                        // find new vertex index in adjacentTriangle
+                        int intersectVertexIndex0 = triangles[triangleBaseIndex + bestIntersectI];
+                        int intersectVertexIndex1 = triangles[triangleBaseIndex + bestIntersectI1];
+                        int newTriangleIndex = -1;
+                        for (int i = 0; i < 3; i++)
+                        {
+                            int vertexIndex = triangles[adjacentTriangle + i];
+                            if (vertexIndex != intersectVertexIndex0 &&
+                                vertexIndex != intersectVertexIndex1)
+                            {
+                                newTriangleIndex = adjacentTriangle + i;
+                                break;
+                            }
+                        }
+
+                        if (newTriangleIndex == -1)
+                        {
+                            // should never happen
+                            throw new Exception();
+                        }
+
+                        // if not visited before
+                        if (newTriangleIndex != -1 && visitedTriangles.Add(newTriangleIndex))
+                        {
+                            // ensure not to go backwards later
+                            visitedTriangles.Add(triangleBaseIndex + awayI);
+
+                            // TODO mark edge
+                            intersectingEdges.Add(new Vector2Int(intersectVertexIndex0, intersectVertexIndex1));
+
+                            // continue outer loop
+                            isEnded = false;
+                            nextAroundTriangleIndex = newTriangleIndex;
+                            visitTriangles.Clear();
+                            return;
+                        }
+                    }
+                }
+            }
+        }
     }
 }

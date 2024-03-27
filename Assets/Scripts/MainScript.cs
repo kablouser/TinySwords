@@ -79,6 +79,9 @@ public class MainScript : MonoBehaviour
     public List<GameObject> unitsDefaultDebug;
 #endif
 
+    [Header("Pathfinding")]
+    public OverlapGrid overlapGrid;
+
     [Header("Selection")]
     public HashSetID currentSelectIDs;
     public List<GameObject> selectIcons;
@@ -137,8 +140,15 @@ public class MainScript : MonoBehaviour
 
     void Start()
     {
+        overlapGrid.Snapshot();
+
         QualitySettings.vSyncCount = 1;
         boxSelectQuery = new Collider2D[EXPECTED_SELECT_COUNT];
+
+        //TODO THINK
+        pathfinding = new List<Vector2Int>();
+        pathfindingVisitedFrom = new Dictionary<Vector2Int, Vector2Int>();
+        pathfindingScores = new List<GreedyPathfind.Score>();
 
 #if UNITY_EDITOR
         //Application.targetFrameRate = 30;
@@ -162,12 +172,14 @@ public class MainScript : MonoBehaviour
                     {
                         rigidbody = unitGameObject.GetComponent<Rigidbody2D>(),
                         target = unitGameObject.transform.position,
-                        speed = 1f,
+                        speed = 10f,
                     },
                 };
             });
 #endif
     }
+
+    //static readonly ProfilerMarker s_PreparePerfMarker = new ProfilerMarker("MainScript");
 
     void Update()
     {
@@ -344,33 +356,98 @@ public class MainScript : MonoBehaviour
                 }
             }
         }
+
+        if (Input.GetKeyDown(KeyCode.E))
+        {
+            GizmosMode = 1 - GizmosMode;
+        }
+
+        if (Input.mouseScrollDelta.y > 0)
+        {
+            pathfindingSteps--;
+        }
+        if (Input.mouseScrollDelta.y < 0)
+        {
+            pathfindingSteps++;
+        }
     }
+
+    public List<Vector2Int> pathfinding;
+    public Dictionary<Vector2Int, Vector2Int> pathfindingVisitedFrom;
+    public List<GreedyPathfind.Score> pathfindingScores;
+
+    public int pathfindingSteps = 0;
 
     void FixedUpdate()
     {
+        Vector2 halfElementSize = overlapGrid.GetElementSize() * 0.5f;
+        
         // movement update
         {
             Span<UnitEntity> unitsSpan = units.elements.AsSpan();
             foreach (ref UnitEntity unit in unitsSpan)
             {
                 Vector2 unitPosition = (Vector2)unit.transform.position;
-                Vector2 delta = unit.move.target - unitPosition;
-                float maxDelta = unit.move.speed * Time.fixedDeltaTime;
+                Collider2D col = unit.transform.GetComponent<Collider2D>();
 
-                if (maxDelta * maxDelta < delta.sqrMagnitude)
+                if (col != null &&
+                    GreedyPathfind.FindGreedy(overlapGrid, new Bounds2D(col.bounds), unitPosition, unit.move.target, pathfinding, pathfindingVisitedFrom, pathfindingScores))
                 {
-                    // too far
-                    delta.Normalize();
-                    delta *= maxDelta;
-                    unit.move.rigidbody.MovePosition(delta + unitPosition);
+                    continue;
+                    Vector2 nextPathPosition = 0 < pathfinding.Count ?
+                        (Vector2)overlapGrid.GetElementWorldPosition(overlapGrid.bounds.size, halfElementSize, pathfinding[0]) :
+                        unit.move.target;
+
+                    Vector2 delta = nextPathPosition - unitPosition;
+                    float maxDelta = unit.move.speed * Time.fixedDeltaTime;
+
+                    if (maxDelta * maxDelta < delta.sqrMagnitude)
+                    {
+                        // too far
+                        delta.Normalize();
+                        delta *= maxDelta;
+                        unit.move.rigidbody.MovePosition(delta + unitPosition);
+
+                        // pathfind
+
+                    }
+                    else
+                    {
+                        // close enough
+                        unit.move.rigidbody.MovePosition(nextPathPosition);
+                    }
                 }
-                else
-                {
-                    // close enough
-                    unit.move.rigidbody.MovePosition(unit.move.target);
-                }                
             }
         }
     }
+
+    public int GizmosMode = 0;
+
+    private void OnDrawGizmos()
+    {
+        Vector2 halfElementSize = overlapGrid.GetElementSize() / 2.0f;
+        Vector2 boundsSize = overlapGrid.bounds.size;
+
+        if (GizmosMode == 0 && pathfinding != null)
+        {
+            Gizmos.color = Color.red;
+            for (int i = 1; i < pathfinding.Count; i++)
+            {
+                GizmosMore.DrawArrow(
+                    overlapGrid.GetElementWorldPosition(boundsSize, halfElementSize, pathfinding[i - 1]),
+                    overlapGrid.GetElementWorldPosition(boundsSize, halfElementSize, pathfinding[i]));
+            }
+        }
+        if (GizmosMode == 1 && pathfindingVisitedFrom != null) {
+
+            Gizmos.color = Color.green;
+            foreach (var kvp in pathfindingVisitedFrom)
+            {
+                GizmosMore.DrawArrow(
+                    overlapGrid.GetElementWorldPosition(boundsSize, halfElementSize, kvp.Value),
+                    overlapGrid.GetElementWorldPosition(boundsSize, halfElementSize, kvp.Key));
+            }
+        }
+}
 }
 

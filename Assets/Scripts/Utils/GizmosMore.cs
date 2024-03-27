@@ -5,15 +5,12 @@ public static class GizmosMore
 {
     public static void DrawArrow(in Vector3 from, in Vector3 to)
     {
-        Color color = Gizmos.color;
         Gizmos.DrawLine(from, to);
         Vector3 direction = to - from;
         Vector3 right = (Quaternion.Euler(0, 0, 30f) * -direction) * 0.1f;
         Vector3 left = (Quaternion.Euler(0, 0, -30f) * -direction) * 0.1f;
-        Gizmos.color = color * 0.5f;
         Gizmos.DrawLine(to, right + to);
         Gizmos.DrawLine(to, left + to);
-        Gizmos.color = color;
     }
 
     public static void DrawTriangle(in Vector3 a, in Vector3 b, in Vector3 c)

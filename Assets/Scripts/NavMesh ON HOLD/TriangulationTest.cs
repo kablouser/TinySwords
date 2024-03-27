@@ -8,14 +8,18 @@ public class TriangulationTest : MonoBehaviour
     public List<int> triangles;
 
     public List<Vector2Int> constraintsInput;
-    public List<Vector2Int> satisfiedConstraints;
+    public List<Vector2Int> intersectingEdges;
+
+    public List<int> adjacency;
+
+    public int testRotateAroundTriangleIndex;
 
     public void OnDrawGizmos()
     {
-        if (input == null || vertices == null || triangles == null || constraintsInput  == null || satisfiedConstraints == null)
+        if (input == null || vertices == null || triangles == null || constraintsInput == null || intersectingEdges == null)
             return;
-/*        else if (triangles.Count != adjacency.Count)
-            return;*/
+        /*        else if (triangles.Count != adjacency.Count)
+                    return;*/
 
         // input
         {
@@ -71,25 +75,25 @@ public class TriangulationTest : MonoBehaviour
         }
 
         // constraints
-        if (scroll % 2 == 1)
-        {            
-/*            foreach(var c in constraintsInput)
+        //if (scroll % 2 == 1)
+        {
+/*            foreach (var c in constraintsInput)
             {
                 if (0 <= c.x && c.x < vertices.Count &&
                     0 <= c.y && c.y < vertices.Count)
                 {
-                    Gizmos.color = satisfiedConstraints.Contains(c) ?
+                    Gizmos.color = intersectingEdges.Contains(c) ?
                         Color.green : Color.red;
-                    GizmosMore.DrawArrow(vertices[c.x], vertices[c.y]);                       
+                    GizmosMore.DrawArrow(vertices[c.x], vertices[c.y]);
                 }
             }*/
 
-            foreach (var c in satisfiedConstraints)
+            foreach (var c in intersectingEdges)
             {
                 if (0 <= c.x && c.x < vertices.Count &&
                     0 <= c.y && c.y < vertices.Count)
                 {
-                    Gizmos.color = Color.green;
+                    Gizmos.color = Color.red;
                     GizmosMore.DrawArrow(vertices[c.x], vertices[c.y]);
                 }
             }
@@ -108,6 +112,7 @@ public class TriangulationTest : MonoBehaviour
 
     public int steps = 0;
     public int scroll = 0;
+    public int scroll2 = 0;
     public bool scrollMode = false;
 
     public string currentT;
@@ -151,18 +156,26 @@ public class TriangulationTest : MonoBehaviour
                 steps--;
 
             vertices = new List<Vector2>(input);
-            if (satisfiedConstraints == null)
-                satisfiedConstraints = new List<Vector2Int>();
-            DelaunayTriangulation2D.Triangulate(vertices, triangles, constraintsInput, steps, satisfiedConstraints);
+            if (intersectingEdges == null)
+                intersectingEdges = new List<Vector2Int>();
+            if (adjacency == null)
+                adjacency = new List<int>();
+            DelaunayTriangulation2D.Triangulate(vertices, triangles, constraintsInput, steps, intersectingEdges, adjacency);
         }
 
         if (0.1f < Input.mouseScrollDelta.y)
         {
-            --scroll;
+            if (Input.GetKey(KeyCode.LeftControl))
+                scroll2--;
+            else
+                --scroll;
         }
         else if (Input.mouseScrollDelta.y < -0.1f)
         {
-            ++scroll;
-        }
+            if (Input.GetKey(KeyCode.LeftControl))
+                scroll2++;
+            else
+                ++scroll;
+        }        
     }
 }
