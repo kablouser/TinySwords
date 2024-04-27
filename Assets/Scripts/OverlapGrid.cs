@@ -23,6 +23,18 @@ public struct OverlapGrid
         AddBounds(startBounds);
     }
 
+    public void AddBounds(in Bounds2D addBound)
+    {
+        Span<Bounds2D> addBounds = stackalloc Bounds2D[1] { addBound };
+        Rasterise(addBounds, new RasteriseAddBoundsLambda());
+    }
+
+    public void RemoveBounds(in Bounds2D removeBound)
+    {
+        Span<Bounds2D> removeBounds = stackalloc Bounds2D[1] { removeBound };
+        Rasterise(removeBounds, new RasteriseRemoveBoundsLambda());
+    }
+
     public void AddBounds(in Span<Bounds2D> addBounds)
     {
         Rasterise(addBounds, new RasteriseAddBoundsLambda());

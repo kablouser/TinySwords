@@ -77,6 +77,16 @@ public struct Bounds2D
         max = newCenter + newExtends;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static Bounds2D NaN()
+    {
+        return new Bounds2D
+        {
+            min = new Vector2(float.NaN, float.NaN),
+            max = new Vector2(float.NaN, float.NaN),
+        };
+    }
+
     //
     // Summary:
     //     Grows the Bounds to include the point.

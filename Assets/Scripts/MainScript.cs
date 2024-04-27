@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 using static MainScript;
 
@@ -53,6 +54,7 @@ public struct UnitEntity
     public Transform transform;
     public AnimationComponent animation;
     public MoveComponent move;
+    public Bounds2D currentBounds;
 }
 
 [Serializable]
@@ -148,7 +150,7 @@ public class MainScript : MonoBehaviour
         //TODO THINK
         pathfinding = new List<Vector2Int>();
         pathfindingVisitedFrom = new Dictionary<Vector2Int, Vector2Int>();
-        pathfindingScores = new List<GreedyPathfind.Score>();
+        pathfindingScores = new List<Pathfind.ScoreAStar>();
 
 #if UNITY_EDITOR
         //Application.targetFrameRate = 30;
@@ -174,6 +176,7 @@ public class MainScript : MonoBehaviour
                         target = unitGameObject.transform.position,
                         speed = 10f,
                     },
+                    currentBounds = Bounds2D.NaN(),
                 };
             });
 #endif
@@ -374,7 +377,7 @@ public class MainScript : MonoBehaviour
 
     public List<Vector2Int> pathfinding;
     public Dictionary<Vector2Int, Vector2Int> pathfindingVisitedFrom;
-    public List<GreedyPathfind.Score> pathfindingScores;
+    public List<Pathfind.ScoreAStar> pathfindingScores;
 
     public int pathfindingSteps = 0;
 
@@ -388,15 +391,20 @@ public class MainScript : MonoBehaviour
             foreach (ref UnitEntity unit in unitsSpan)
             {
                 Vector2 unitPosition = (Vector2)unit.transform.position;
-                Collider2D col = unit.transform.GetComponent<Collider2D>();
 
-                if (col != null &&
-                    GreedyPathfind.FindGreedy(overlapGrid, new Bounds2D(col.bounds), unitPosition, unit.move.target, pathfinding, pathfindingVisitedFrom, pathfindingScores))
+                Bounds2D bounds = new Bounds2D(unit.transform.GetComponent<Collider2D>().bounds);
+
+                if (unit.currentBounds.min.x != float.NaN)
                 {
-                    continue;
-                    Vector2 nextPathPosition = 0 < pathfinding.Count ?
-                        (Vector2)overlapGrid.GetElementWorldPosition(overlapGrid.bounds.size, halfElementSize, pathfinding[0]) :
-                        unit.move.target;
+                    overlapGrid.RemoveBounds(unit.currentBounds);
+                }
+                unit.currentBounds = bounds;
+                overlapGrid.AddBounds(unit.currentBounds);
+
+                if (Pathfind.FindAStar(overlapGrid, unit.currentBounds, unitPosition, unit.move.target, pathfinding, pathfindingVisitedFrom, pathfindingScores, pathfindingSteps) &&
+                    0 < pathfinding.Count)
+                {
+                    Vector2 nextPathPosition = (Vector2)overlapGrid.GetElementWorldPosition(overlapGrid.bounds.size, halfElementSize, pathfinding[0]);
 
                     Vector2 delta = nextPathPosition - unitPosition;
                     float maxDelta = unit.move.speed * Time.fixedDeltaTime;
@@ -409,13 +417,14 @@ public class MainScript : MonoBehaviour
                         unit.move.rigidbody.MovePosition(delta + unitPosition);
 
                         // pathfind
-
                     }
                     else
                     {
                         // close enough
                         unit.move.rigidbody.MovePosition(nextPathPosition);
                     }
+
+                    pathfinding.Insert(0, overlapGrid.GetIndex(halfElementSize * 2.0f, unitPosition));
                 }
             }
         }
@@ -438,7 +447,8 @@ public class MainScript : MonoBehaviour
                     overlapGrid.GetElementWorldPosition(boundsSize, halfElementSize, pathfinding[i]));
             }
         }
-        if (GizmosMode == 1 && pathfindingVisitedFrom != null) {
+        if (GizmosMode == 1 && pathfindingVisitedFrom != null)
+        {
 
             Gizmos.color = Color.green;
             foreach (var kvp in pathfindingVisitedFrom)
@@ -448,6 +458,6 @@ public class MainScript : MonoBehaviour
                     overlapGrid.GetElementWorldPosition(boundsSize, halfElementSize, kvp.Key));
             }
         }
-}
+    }
 }
 
