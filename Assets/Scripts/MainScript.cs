@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
-using Unity.VisualScripting;
 using UnityEngine;
 using static MainScript;
+
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 [Serializable]
 public struct SpriteSheet
@@ -55,6 +58,7 @@ public struct UnitEntity
     public AnimationComponent animation;
     public MoveComponent move;
     public Bounds2D currentBounds;
+    public NavigationNode navigationNode;
 }
 
 [Serializable]
@@ -65,11 +69,11 @@ public class MainScript : MonoBehaviour
     public const float ANIMATION_FRAMERATE = 10f;
     public const int EXPECTED_SELECT_COUNT = 8;
 
-    public enum SpriteSheetIndex { WarriorBlue};
+    public enum SpriteSheetIndex { WarriorBlue, ArcherBlue };
     [Header("Assets")]
     public List<SpriteSheet> spriteSheets;
 
-    public enum AnimationClipIndex { WarriorStand, WarriorWalk};
+    public enum AnimationClipIndex { WarriorStand, WarriorWalk };
     public List<AnimationClip> animationClips;
 
     [Header("References")]
@@ -77,12 +81,8 @@ public class MainScript : MonoBehaviour
     public GameObject selectIconPrefab;
     public SpriteRenderer boxSelector;
 
-#if UNITY_EDITOR
-    public List<GameObject> unitsDefaultDebug;
-#endif
-
     [Header("Pathfinding")]
-    public OverlapGrid overlapGrid;
+    public NavigationGrid navigationGrid;
 
     [Header("Selection")]
     public HashSetID currentSelectIDs;
@@ -99,6 +99,18 @@ public class MainScript : MonoBehaviour
     public VersionedPool<UnitEntity> units;
 
 #if UNITY_EDITOR
+    [Header("EDITOR ONLY")]
+    public List<GameObject> unitsDefaultDebug;
+
+    public Bounds2D setNavigationGridBoundsSize;
+    public Vector2 setNavigationGridElementSize;
+    [ContextMenu("_SetNavigationGridElementSize")]
+    void SetNavigationGridElementSize()
+    {
+        Undo.RecordObject(this, "SetNavigationGridElementSize");
+        navigationGrid.SetElementSizeUninitialised(setNavigationGridBoundsSize, setNavigationGridElementSize);
+    }
+
     void DefaultEnumNamesIterate<TEnum, TStruct>(ref List<TStruct> outList, Func<TStruct, string, TStruct> setName) where TStruct : struct
     {
         string[] names = Enum.GetNames(typeof(TEnum));
@@ -126,9 +138,13 @@ public class MainScript : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Fills up lists with enum element length { spriteSheets, animationClips }
+    /// </summary>
     [ContextMenu("_DefaultEnumNames")]
     void DefaultEnumNames()
     {
+        Undo.RecordObject(this, "DefaultEnumNames");
         DefaultEnumNamesIterate<SpriteSheetIndex, SpriteSheet>(ref spriteSheets, (inS, inName) => { inS.name = inName; return inS; });
         DefaultEnumNamesIterate<AnimationClipIndex, AnimationClip>(ref animationClips, (inS, inName) => { inS.name = inName; return inS; });
     }
@@ -136,13 +152,14 @@ public class MainScript : MonoBehaviour
     [ContextMenu("_Prepopulate Pools")]
     void PrepopulatePools()
     {
+        Undo.RecordObject(this, "PrepopulatePools");
         Pool.Prepopulate(selectIcons, selectIconPrefab, EXPECTED_SELECT_COUNT);
     }
 #endif
 
     void Start()
     {
-        overlapGrid.Snapshot();
+        navigationGrid.Snapshot();
 
         QualitySettings.vSyncCount = 1;
         boxSelectQuery = new Collider2D[EXPECTED_SELECT_COUNT];
@@ -159,24 +176,38 @@ public class MainScript : MonoBehaviour
             (unitGameObject, id) =>
             {
                 unitGameObject.GetComponent<IDComponent>().id = id;
+                Collider2D collider = unitGameObject.GetComponent<Collider2D>();
+                SpriteRenderer spriteRenderer = unitGameObject.GetComponent<SpriteRenderer>();
+                Rigidbody2D rigidbody2D = unitGameObject.GetComponent<Rigidbody2D>();
+                SpriteSheetIndex chooseSpritesheet;
+
+                if (spriteRenderer.sprite == spriteSheets[0].spriteSheet[0])
+                {
+                    chooseSpritesheet = SpriteSheetIndex.WarriorBlue;
+                }
+                else
+                {
+                    chooseSpritesheet = SpriteSheetIndex.ArcherBlue;
+                }
 
                 return new UnitEntity
                 {
                     transform = unitGameObject.transform,
                     animation = new AnimationComponent
                     {
-                        spriteSheetIndex = SpriteSheetIndex.WarriorBlue,
+                        spriteSheetIndex = chooseSpritesheet,
                         animationClipIndex = AnimationClipIndex.WarriorStand,
                         currentIndex = 0f,
-                        spriteRenderer = unitGameObject.GetComponent<SpriteRenderer>(),
+                        spriteRenderer = spriteRenderer,
                     },
                     move = new MoveComponent
                     {
-                        rigidbody = unitGameObject.GetComponent<Rigidbody2D>(),
+                        rigidbody = rigidbody2D,
                         target = unitGameObject.transform.position,
                         speed = 10f,
                     },
-                    currentBounds = Bounds2D.NaN(),
+                    currentBounds = new Bounds2D(collider.bounds),
+                    navigationNode = NavigationNode.Blocking(),
                 };
             });
 #endif
@@ -365,25 +396,24 @@ public class MainScript : MonoBehaviour
             GizmosMode = 1 - GizmosMode;
         }
 
-        if (Input.mouseScrollDelta.y > 0)
+/*        if (Input.mouseScrollDelta.y > 0)
         {
             pathfindingSteps--;
         }
         if (Input.mouseScrollDelta.y < 0)
         {
             pathfindingSteps++;
-        }
+        }*/
     }
 
     public List<Vector2Int> pathfinding;
     public Dictionary<Vector2Int, Vector2Int> pathfindingVisitedFrom;
     public List<Pathfind.ScoreAStar> pathfindingScores;
-
-    public int pathfindingSteps = 0;
-
+    public float forceMax = 5f;
     void FixedUpdate()
     {
-        Vector2 halfElementSize = overlapGrid.GetElementSize() * 0.5f;
+        Vector2 elementSize = navigationGrid.GetElementSize();
+        Vector2 halfElementSize = elementSize * 0.5f;
         
         // movement update
         {
@@ -391,41 +421,56 @@ public class MainScript : MonoBehaviour
             foreach (ref UnitEntity unit in unitsSpan)
             {
                 Vector2 unitPosition = (Vector2)unit.transform.position;
-
-                Bounds2D bounds = new Bounds2D(unit.transform.GetComponent<Collider2D>().bounds);
+                Collider2D unitCollider = unit.transform.GetComponent<Collider2D>();
 
                 if (unit.currentBounds.min.x != float.NaN)
                 {
-                    overlapGrid.RemoveBounds(unit.currentBounds);
+                    navigationGrid.AddBounds(unit.currentBounds, -unit.navigationNode, elementSize);
                 }
-                unit.currentBounds = bounds;
-                overlapGrid.AddBounds(unit.currentBounds);
 
-                if (Pathfind.FindAStar(overlapGrid, unit.currentBounds, unitPosition, unit.move.target, pathfinding, pathfindingVisitedFrom, pathfindingScores, pathfindingSteps) &&
+                Vector2 delta = new Vector2();
+                Vector2 maxDeltaVector = new Vector2();
+
+                if (Pathfind.FindAStar(
+                        navigationGrid, unit.move.rigidbody.mass * unit.move.speed, unitPosition, unit.move.target,
+                        pathfinding,
+                        pathfindingVisitedFrom, pathfindingScores) &&
+
                     0 < pathfinding.Count)
                 {
-                    Vector2 nextPathPosition = (Vector2)overlapGrid.GetElementWorldPosition(overlapGrid.bounds.size, halfElementSize, pathfinding[0]);
+                    Vector2 nextPathPosition = (Vector2)navigationGrid.GetElementWorldPosition(navigationGrid.bounds.size, halfElementSize, pathfinding[0]);
 
-                    Vector2 delta = nextPathPosition - unitPosition;
+                    delta = nextPathPosition - unitPosition;
+                    float deltaMagnitude = delta.magnitude;
                     float maxDelta = unit.move.speed * Time.fixedDeltaTime;
+                    maxDeltaVector = delta * maxDelta / deltaMagnitude;
 
-                    if (maxDelta * maxDelta < delta.sqrMagnitude)
+                    //if (maxDelta < deltaMagnitude)
                     {
                         // too far
-                        delta.Normalize();
-                        delta *= maxDelta;
-                        unit.move.rigidbody.MovePosition(delta + unitPosition);
-
-                        // pathfind
+                        //unit.move.rigidbody.MovePosition(maxDeltaVector + unitPosition);
+                        Vector2 force = 1f < deltaMagnitude ?
+                            (delta * unit.move.speed / deltaMagnitude - unit.move.rigidbody.velocity) * unit.move.rigidbody.mass :
+                            (delta * unit.move.speed - unit.move.rigidbody.velocity) * unit.move.rigidbody.mass;
+                        float forceMag = force.magnitude;
+                        if (forceMax < forceMag)
+                        {
+                            force *= forceMax / forceMag;
+                        }
+                        unit.move.rigidbody.AddForce(force, ForceMode2D.Impulse);
                     }
-                    else
+                    //else
                     {
                         // close enough
-                        unit.move.rigidbody.MovePosition(nextPathPosition);
+                        //unit.move.rigidbody.MovePosition(nextPathPosition);
                     }
 
-                    pathfinding.Insert(0, overlapGrid.GetIndex(halfElementSize * 2.0f, unitPosition));
+                    pathfinding.Insert(0, navigationGrid.GetIndex(elementSize, unitPosition));
                 }
+
+                unit.currentBounds = new Bounds2D(unitCollider.bounds);
+                unit.navigationNode = NavigationNode.FromCollider(unitCollider, delta);
+                navigationGrid.AddBounds(unit.currentBounds, unit.navigationNode, elementSize);
             }
         }
     }
@@ -434,8 +479,8 @@ public class MainScript : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        Vector2 halfElementSize = overlapGrid.GetElementSize() / 2.0f;
-        Vector2 boundsSize = overlapGrid.bounds.size;
+        Vector2 halfElementSize = navigationGrid.GetElementSize() / 2.0f;
+        Vector2 boundsSize = navigationGrid.bounds.size;
 
         if (GizmosMode == 0 && pathfinding != null)
         {
@@ -443,8 +488,8 @@ public class MainScript : MonoBehaviour
             for (int i = 1; i < pathfinding.Count; i++)
             {
                 GizmosMore.DrawArrow(
-                    overlapGrid.GetElementWorldPosition(boundsSize, halfElementSize, pathfinding[i - 1]),
-                    overlapGrid.GetElementWorldPosition(boundsSize, halfElementSize, pathfinding[i]));
+                    navigationGrid.GetElementWorldPosition(boundsSize, halfElementSize, pathfinding[i - 1]),
+                    navigationGrid.GetElementWorldPosition(boundsSize, halfElementSize, pathfinding[i]));
             }
         }
         if (GizmosMode == 1 && pathfindingVisitedFrom != null)
@@ -454,8 +499,8 @@ public class MainScript : MonoBehaviour
             foreach (var kvp in pathfindingVisitedFrom)
             {
                 GizmosMore.DrawArrow(
-                    overlapGrid.GetElementWorldPosition(boundsSize, halfElementSize, kvp.Value),
-                    overlapGrid.GetElementWorldPosition(boundsSize, halfElementSize, kvp.Key));
+                    navigationGrid.GetElementWorldPosition(boundsSize, halfElementSize, kvp.Value),
+                    navigationGrid.GetElementWorldPosition(boundsSize, halfElementSize, kvp.Key));
             }
         }
     }

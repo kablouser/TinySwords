@@ -4,17 +4,18 @@ using UnityEngine;
 
 public class PointFilterAssetAudit : AssetPostprocessor
 {
-    void OnPostprocessTexture(Texture2D texture)
+    void OnPreprocessTexture()
     {
         if (!assetImporter.importSettingsMissing)
         {
             return;
-            //EditorUtility.SetDirty(asset);
         }
+        // probably unnessary
+        //Undo.RecordObject(texture, "PointFilterAssetAudit");
 
         TextureImporter importer = assetImporter as TextureImporter;
         importer.filterMode = FilterMode.Point;
-        texture.filterMode = FilterMode.Point;
+        importer.spritePixelsPerUnit = 64;
     }
 }
 #endif

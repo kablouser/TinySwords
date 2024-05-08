@@ -7,16 +7,12 @@ public struct Array2D<T>
 {
     public T[] elements;
     public int dimension0;
-#if UNITY_EDITOR
     public int dimension1;
-#endif
 
     public Array2D(int dimension0, int dimension1)
     {
         this.dimension0 = dimension0;
-#if UNITY_EDITOR
         this.dimension1 = dimension1;
-#endif
         elements = new T[dimension0 * dimension1];
     }
 

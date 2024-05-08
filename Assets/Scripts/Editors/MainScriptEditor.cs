@@ -16,20 +16,20 @@ public class MainScriptEditor : Editor
         if (mainScript == null)
             return;
 
-        mainScript.overlapGrid.OnSceneGUI();
+        mainScript.navigationGrid.OnSceneGUI();
 
 
-        Vector2 halfElementSize = mainScript.overlapGrid.GetElementSize() / 2.0f;
-        Vector2 boundsSize = mainScript.overlapGrid.bounds.size;
+        Vector2 halfElementSize = mainScript.navigationGrid.GetElementSize() / 2.0f;
+        Vector2 boundsSize = mainScript.navigationGrid.bounds.size;
 
-        if (mainScript.pathfindingScores != null)
+/*        if (mainScript.pathfindingScores != null)
         {
             foreach (var kvp in mainScript.pathfindingScores)
             {
                 Handles.Label(mainScript.overlapGrid.GetElementWorldPosition(boundsSize, halfElementSize, kvp.index),
                     $"{kvp.score}");
             }
-        }
+        }*/
     }
 }
 #endif

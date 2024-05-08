@@ -1,28 +1,33 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System;
+using System.IO;
+using Unity.VisualScripting;
 using static UnityEngine.RuleTile.TilingRuleOutput;
+using static Pathfind;
+using System.Reflection;
+using UnityEngine.SocialPlatforms.Impl;
 
 public static class Pathfind
 {
     public static bool FindAStar(
-        in OverlapGrid overlapGrid, in Bounds2D agentBounds, in Vector2 start, in Vector2 end,
+        in NavigationGrid navigationGrid,
+        in float maxRealMomentum, in Vector2 start, in Vector2 end,
         //output
         List<Vector2Int> path,
         //scratch pads
         Dictionary<Vector2Int, Vector2Int> visitedFrom,
-        List<ScoreAStar> scores,
-
-        // TODO REMOVE
-        int steps)
+        List<ScoreAStar> scores)
     {
         path.Clear();
 
-        Vector2 elementSize = overlapGrid.GetElementSize();
-        Vector2Int startIndex = overlapGrid.GetIndex(elementSize, start);
-        Vector2Int endIndex = overlapGrid.GetIndex(elementSize, end);
+        Vector2 elementSize = navigationGrid.GetElementSize();
+        Vector2Int startIndex = navigationGrid.GetIndex(elementSize, start);
+        Vector2Int endIndex = navigationGrid.GetIndex(elementSize, end);
+        endIndex.x = Mathf.Clamp(endIndex.x, 0, navigationGrid.nodes.dimension0);
+        endIndex.y = Mathf.Clamp(endIndex.y, 0, navigationGrid.nodes.dimension1);
 
-        if (!(overlapGrid.overlaps.InRange(startIndex) && overlapGrid.overlaps.InRange(endIndex)))
+        if (!navigationGrid.nodes.InRange(startIndex))
             return false;
         if (startIndex == endIndex)
         {
@@ -30,22 +35,7 @@ public static class Pathfind
             return true;
         }
 
-        overlapGrid.RemoveBounds(agentBounds);
-
-/*        {
-            Vector2Int copyEndIndex = endIndex;
-            if (!FindNearestEmpty(overlapGrid, copyEndIndex, out endIndex))
-            {
-                overlapGrid.AddBounds(agentBounds);
-                return false;
-            }
-        }
-        if (startIndex == endIndex)
-        {
-            overlapGrid.AddBounds(agentBounds);
-            path.Add(endIndex);
-            return true;
-        }*/
+        //navigationGrid.AddBounds(agentBounds, -currentNavigationNode, elementSize);
 
         visitedFrom.Clear();
         scores.Clear();
@@ -59,29 +49,50 @@ public static class Pathfind
 
         visitedFrom.Add(currentIndex, currentIndex);
 
-        int maxIts = overlapGrid.overlaps.dimension0 * overlapGrid.overlaps.dimension1;
+        int maxIts;
+        {
+            maxIts =
+                navigationGrid.nodes.TryIndex(endIndex, out NavigationNode endNavigationNode) &&
+                endNavigationNode.blocking == 0 ?
+                    200 : // end is unblocked, there could be a path
+                    40; // end is blocked, there's no path, find somewhere nearby
+            maxIts = Mathf.Min(maxIts, navigationGrid.nodes.dimension0 * navigationGrid.nodes.dimension1);
+        }
+
+        int maxMomentumScaled = Mathf.Max(1, Mathf.RoundToInt(maxRealMomentum * NavigationNode.MOMENTUM_SCALE));
+        float movableThresholdMomentumScaled = maxRealMomentum * NavigationNode.MOMENTUM_SCALE * 0.5f;
 
         do
         {
-            OverlapGrid.GetNeighbours(currentIndex, neighbours);
+            NavigationGrid.GetNeighbours(currentIndex, neighbours);
             foreach (Vector2Int neighbour in neighbours)
             {
-                if (overlapGrid.overlaps.TryIndex(neighbour, out int overlaps) &&
-                    0 == overlaps)
-                {                    
-                    if (1 < (neighbour - currentIndex).sqrMagnitude)
+                Vector2Int currentToNeighbour = neighbour - currentIndex;
+                Vector2 currentToNeighbourFloat = currentToNeighbour;
+                float currentToNeighbourLength = currentToNeighbour.magnitude;
+
+                NavigationNode theoreticalMomentumInNeighbour = new NavigationNode
+                {
+                    scaledMomentum = maxMomentumScaled * currentToNeighbour,
+                    blocking = 0,
+                };
+
+                if (navigationGrid.nodes.TryIndex(neighbour, out NavigationNode neighbourMomentum) &&
+                    movableThresholdMomentumScaled <= currentToNeighbour.Dot(neighbourMomentum.CombineScaledMomentum(theoreticalMomentumInNeighbour)) / currentToNeighbourLength)
+                {
+                    if (1.1f < currentToNeighbourLength)
                     {
                         // deal with diagonal collision
-                        if (!(overlapGrid.overlaps.TryIndex(new Vector2Int(currentIndex.x, neighbour.y), out int diagonal0Overlaps) &&
-                            0 == diagonal0Overlaps &&
-                            overlapGrid.overlaps.TryIndex(new Vector2Int(neighbour.x, currentIndex.y), out int diagonal1Overlaps) &&
-                            0 == diagonal1Overlaps))
+                        if (!(navigationGrid.nodes.TryIndex(new Vector2Int(currentIndex.x, neighbour.y), out neighbourMomentum) &&
+                            0 < currentToNeighbour.Dot(neighbourMomentum.CombineScaledMomentum(theoreticalMomentumInNeighbour)) &&
+                            navigationGrid.nodes.TryIndex(new Vector2Int(neighbour.x, currentIndex.y), out neighbourMomentum) &&
+                            0 < currentToNeighbour.Dot(neighbourMomentum.CombineScaledMomentum(theoreticalMomentumInNeighbour))))
                             continue;
                     }
 
                     if (visitedFrom.TryAdd(neighbour, currentIndex))
                     {
-                        float newDistanceTravelled = currentDistanceTravelled + (neighbour - currentIndex).magnitude;
+                        float newDistanceTravelled = currentDistanceTravelled + currentToNeighbourLength;
                         float newDistanceToEnd = (neighbour - endIndex).magnitude;
 
                         ScoreAStar score = new ScoreAStar
@@ -101,39 +112,38 @@ public static class Pathfind
                 }
             }
 
-            
             if (0 == scores.Count)
                 break;
             else
             {
                 // next currentIndex
+                Span<ScoreAStar> scoresSpan = scores.AsSpan();
+                ref ScoreAStar nextBestScore = ref scoresSpan[scores.Count - 1];
+                currentIndex = nextBestScore.index;
+
+                if (currentIndex == endIndex)
+                    break;
+
+                if (nextBestScore.distanceToEnd < nearestDistanceToEnd)
                 {
-                    Span<ScoreAStar> scoresSpan = scores.AsSpan();
-                    ref ScoreAStar nextBestScore = ref scoresSpan[scores.Count - 1];
-                    currentIndex = nextBestScore.index;
-
-                    if (currentIndex == endIndex)
-                        break;
-
-                    if (nextBestScore.distanceToEnd < nearestDistanceToEnd)
-                    {
-                        nearestDistanceToEndIndex = currentIndex;
-                        nearestDistanceToEnd = nextBestScore.distanceToEnd;
-                    }
-
-                    currentDistanceTravelled = nextBestScore.distanceTravelled;
+                    nearestDistanceToEndIndex = currentIndex;
+                    nearestDistanceToEnd = nextBestScore.distanceToEnd;
                 }
+
+                currentDistanceTravelled = nextBestScore.distanceTravelled;
+
                 scores.RemoveAt(scores.Count - 1);
                 maxIts--;
-            }            
+            }
         }
         while (0 < maxIts);
 
-        overlapGrid.AddBounds(agentBounds);
+        //navigationGrid.AddBounds(agentBounds, currentNavigationNode, elementSize);
 
         if (currentIndex != endIndex)
         {
-            currentIndex = nearestDistanceToEndIndex;
+            path.Add(nearestDistanceToEndIndex);
+            currentIndex = visitedFrom[nearestDistanceToEndIndex];
         }
 
         // construct path
@@ -158,7 +168,7 @@ public static class Pathfind
         public int CompareTo(ScoreAStar other)
         {
             // duplicates allowed
-            // ascending order
+            // descending order
             if (score < other.score)
                 return 1;
             else if (other.score < score)
@@ -176,88 +186,133 @@ public static class Pathfind
                 return -1;
         }
     }
-
-    public static bool FindNearestEmpty(in OverlapGrid overlapGrid, in Vector2Int index, out Vector2Int nearestEmpty)
+    /*
+    public static bool FindFormation(
+        in NavigationGrid navigationGrid,
+        in Vector2 formationSuggestCenter, int formationCount,
+        //output
+        List<Vector2> outFormationPositions,
+        //scratchpad
+        List<(Vector2Int, float)> scores,
+        HashSet<Vector2Int> nodesVisited)
     {
-        if (!overlapGrid.overlaps.InRange(index))
-        {
-            nearestEmpty = default;
-            return false;
-        }
+        outFormationPositions.Clear();
+        scores.Clear();
+        nodesVisited.Clear();
 
-        if (overlapGrid.overlaps[index] == 0)
-        {
-            nearestEmpty = index;
+        if (formationCount == 0)
             return true;
-        }
 
-        bool isBounded = false;
-        for (int i = 1; !isBounded; i++)
+        Vector2 elementSize = navigationGrid.GetElementSize();
+        Vector2Int formationSuggestIndex = navigationGrid.GetIndex(elementSize, formationSuggestCenter);
+        formationSuggestIndex.x = Mathf.Clamp(formationSuggestIndex.x, 0, navigationGrid.nodes.dimension0);
+        formationSuggestIndex.y = Mathf.Clamp(formationSuggestIndex.y, 0, navigationGrid.nodes.dimension1);
+
+        Span<Vector2Int> neighbours = stackalloc Vector2Int[8];
+
+        // find nearest open node to formation index
+        Vector2Int formationOriginIndex = formationSuggestIndex;
+        nodesVisited.Add(formationOriginIndex);
+        while (
+            navigationGrid.nodes.TryIndex(formationOriginIndex, out NavigationNode navigationNode) &&
+            0 < navigationNode.blocking)
         {
-            isBounded = true;
-
-            if (index.x + i < overlapGrid.overlaps.dimension0)
+            NavigationGrid.GetNeighbours(formationOriginIndex, neighbours);
+            foreach(ref Vector2Int neighbour in neighbours)
             {
-                isBounded = false;
-
-                int yMax = Mathf.Min(index.y + i, overlapGrid.overlaps.dimension1);
-                for (int y = Mathf.Max(index.y - i + 1, 0); y < yMax; y++)
+                if (nodesVisited.Add(neighbour))
                 {
-                    nearestEmpty = new Vector2Int(index.x + i, y);
-                    if (overlapGrid.overlaps[nearestEmpty] == 0)
+                    (Vector2Int, float) score = (neighbour, (formationOriginIndex - neighbour).magnitude);
+
+                    int scoreIndex = scores.BinarySearch(score, new IndexScoreDescending());
+                    if (scoreIndex <= 0)
                     {
-                        return true;
+                        scores.Insert(~scoreIndex, score);
                     }
                 }
             }
 
-            if (0 <= index.x - i)
+            if (0 == scores.Count)
+                return false;
+            else
             {
-                isBounded = false;
+                Span<(Vector2Int, float)> scoresSpan = scores.AsSpan();
+                ref (Vector2Int, float) bestScore = ref scoresSpan[scores.Count - 1];
 
-                int yMax = Mathf.Min(index.y + i, overlapGrid.overlaps.dimension1);
-                for (int y = Mathf.Max(index.y - i + 1, 0); y < yMax; y++)
-                {
-                    nearestEmpty = new Vector2Int(index.x - i, y);
-                    if (overlapGrid.overlaps[nearestEmpty] == 0)
-                    {
-                        return true;
-                    }
-                }
-            }
-
-            if (index.y + i < overlapGrid.overlaps.dimension1)
-            {
-                isBounded = false;
-
-                int xMax = Mathf.Min(index.x + i + 1, overlapGrid.overlaps.dimension0);
-                for (int x = Mathf.Max(index.x - i, 0); x < xMax; x++)
-                {
-                    nearestEmpty = new Vector2Int(x, index.y + i);
-                    if (overlapGrid.overlaps[nearestEmpty] == 0)
-                    {
-                        return true;
-                    }
-                }
-            }
-
-            if (0 <= index.y - i)
-            {
-                isBounded = false;
-
-                int xMax = Mathf.Min(index.x + i + 1, overlapGrid.overlaps.dimension0);
-                for (int x = Mathf.Max(index.x - i, 0); x < xMax; x++)
-                {
-                    nearestEmpty = new Vector2Int(x, index.y - i);
-                    if (overlapGrid.overlaps[nearestEmpty] == 0)
-                    {
-                        return true;
-                    }
-                }
+                formationOriginIndex = bestScore.Item1;
+                nodesVisited.Add(formationOriginIndex);
             }
         }
 
-        nearestEmpty = default;
-        return false;
+        // dont clear nodesVisited, all elements are guaranteed to be blocking or findOpenIndex itself
+
+        // find formation positions
+        Vector2Int nextFormationIndex = formationOriginIndex;
+        outFormationPositions.Add(nextFormationIndex);
+        formationCount--;
+        while (
+            0 < formationCount &&
+            navigationGrid.nodes.TryIndex(formationOriginIndex, out NavigationNode navigationNode) &&
+            navigationNode.blocking == 0)
+        {
+            NavigationGrid.GetNeighbours(formationOriginIndex, neighbours);
+            foreach (ref Vector2Int neighbour in neighbours)
+            {
+                if (nodesVisited.Add(neighbour))
+                {
+                    ManhattanScore score = new ManhattanScore(neighbour, formationOriginIndex);
+
+                    int scoreIndex = scores.BinarySearch(score);
+                    if (scoreIndex <= 0)
+                    {
+                        scores.Insert(~scoreIndex, score);
+                    }
+                }
+            }
+
+            if (0 == scores.Count)
+                return false;
+            else
+            {
+                Span<ManhattanScore> scoresSpan = scores.AsSpan();
+                ref ManhattanScore bestScore = ref scoresSpan[scores.Count - 1];
+
+                formationOriginIndex = bestScore.index;
+                nodesVisited.Add(formationOriginIndex);
+            }
+        }
+        return true;
     }
+
+    private struct IndexScoreDescending : IComparer<(Vector2Int, float)>
+    {
+        public int Compare((Vector2Int, float) lhs, (Vector2Int, float) rhs)
+        {
+            // duplicates allowed
+            // descending order
+            if (lhs.Item2 < rhs.Item2)
+                return 1;
+            else if (rhs.Item2 < lhs.Item2)
+                return -1;
+
+            // index affects ordering
+            if (lhs.Item1.x < rhs.Item1.x)
+                return 1;
+            else if (rhs.Item1.x < lhs.Item1.x)
+                return -1;
+
+            if (lhs.Item1.y < rhs.Item1.y)
+                return 1;
+            else
+                return -1;
+        }
+    }
+
+    private struct SearchFormationNode : IComparable<SearchFormationNode>
+    {
+        public int CompareTo(SearchFormationNode other)
+        {
+            throw new NotImplementedException();
+        }
+    }*/
 }
