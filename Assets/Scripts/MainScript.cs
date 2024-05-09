@@ -95,6 +95,11 @@ public class MainScript : MonoBehaviour
     public Collider2D[] boxSelectQuery;
     public HashSetID boxSelectIDs;
 
+    [Header("Camera controls")]
+    public float cameraEdgeDragSpace = 20f;
+    public float cameraEdgeDragSpeed = 1f;
+    public float cameraMoveSpeed = 1f;
+
     [Header("Entities")]
     public VersionedPool<UnitEntity> units;
 
@@ -159,6 +164,8 @@ public class MainScript : MonoBehaviour
 
     void Start()
     {
+        Cursor.lockState = CursorLockMode.Confined;
+
         navigationGrid.Snapshot();
 
         QualitySettings.vSyncCount = 1;
@@ -391,19 +398,54 @@ public class MainScript : MonoBehaviour
             }
         }
 
+        // Camera controls
+        {
+            Vector2 moveInput = new Vector2(
+                Input.GetAxis(ConstStrings.Horizontal),
+                Input.GetAxis(ConstStrings.Vertical));
+            if (1f < moveInput.sqrMagnitude)
+            {
+                moveInput.Normalize();
+            }
+            moveInput *= cameraMoveSpeed;
+
+            if (moveInput.sqrMagnitude < Mathf.Epsilon * 8f && Input.mousePresent)
+            {
+                Vector2 mousePosition = Input.mousePosition;
+                Vector2 screenDimensions = new Vector2(Screen.width, Screen.height);
+
+                float? dragSpace = null;
+                if (mousePosition.x <= cameraEdgeDragSpace)
+                {
+                    dragSpace = cameraEdgeDragSpace - mousePosition.x;
+                }
+                else if (mousePosition.y <= cameraEdgeDragSpace)
+                {
+                    dragSpace = cameraEdgeDragSpace - mousePosition.y;
+                }
+                else if (screenDimensions.x - cameraEdgeDragSpace <= mousePosition.x)
+                {
+                    dragSpace = mousePosition.x - (screenDimensions.x - cameraEdgeDragSpace);
+                }
+                else if (screenDimensions.y - cameraEdgeDragSpace <= mousePosition.y)
+                {
+                    dragSpace = mousePosition.y - (screenDimensions.y - cameraEdgeDragSpace);
+                }
+
+                if (dragSpace.HasValue)
+                {
+                    // edge dragging
+                    moveInput = cameraEdgeDragSpeed * Mathf.Clamp(dragSpace.Value / cameraEdgeDragSpace, 0f, 1f) * (mousePosition - screenDimensions / 2.0f).normalized;
+                }
+            }
+
+            cameraMain.transform.Translate(moveInput * Time.deltaTime);
+        }
+
         if (Input.GetKeyDown(KeyCode.E))
         {
             GizmosMode = 1 - GizmosMode;
         }
-
-/*        if (Input.mouseScrollDelta.y > 0)
-        {
-            pathfindingSteps--;
-        }
-        if (Input.mouseScrollDelta.y < 0)
-        {
-            pathfindingSteps++;
-        }*/
     }
 
     public List<Vector2Int> pathfinding;
@@ -421,15 +463,16 @@ public class MainScript : MonoBehaviour
             foreach (ref UnitEntity unit in unitsSpan)
             {
                 Vector2 unitPosition = (Vector2)unit.transform.position;
+                Vector2? previousUnitBoundsCenter = null;
                 Collider2D unitCollider = unit.transform.GetComponent<Collider2D>();
 
                 if (unit.currentBounds.min.x != float.NaN)
                 {
                     navigationGrid.AddBounds(unit.currentBounds, -unit.navigationNode, elementSize);
+                    previousUnitBoundsCenter = unit.currentBounds.center;
                 }
 
-                Vector2 delta = new Vector2();
-                Vector2 maxDeltaVector = new Vector2();
+                Vector2 targetVelocity = new Vector2();
 
                 if (Pathfind.FindAStar(
                         navigationGrid, unit.move.rigidbody.mass * unit.move.speed, unitPosition, unit.move.target,
@@ -438,38 +481,38 @@ public class MainScript : MonoBehaviour
 
                     0 < pathfinding.Count)
                 {
-                    Vector2 nextPathPosition = (Vector2)navigationGrid.GetElementWorldPosition(navigationGrid.bounds.size, halfElementSize, pathfinding[0]);
-
-                    delta = nextPathPosition - unitPosition;
-                    float deltaMagnitude = delta.magnitude;
-                    float maxDelta = unit.move.speed * Time.fixedDeltaTime;
-                    maxDeltaVector = delta * maxDelta / deltaMagnitude;
-
-                    //if (maxDelta < deltaMagnitude)
+                    if (navigationGrid.nodes.TryIndex(pathfinding[0], out NavigationNode node) &&
+                        0 == node.blocking)
                     {
-                        // too far
-                        //unit.move.rigidbody.MovePosition(maxDeltaVector + unitPosition);
-                        Vector2 force = 1f < deltaMagnitude ?
-                            (delta * unit.move.speed / deltaMagnitude - unit.move.rigidbody.velocity) * unit.move.rigidbody.mass :
-                            (delta * unit.move.speed - unit.move.rigidbody.velocity) * unit.move.rigidbody.mass;
+                        Vector2 nextPathPosition = (Vector2)navigationGrid.GetElementWorldPosition(navigationGrid.bounds.size, halfElementSize, pathfinding[0]);
+
+                        Vector2 toNextPathPosition = nextPathPosition - unitPosition;
+                        float toNextPathPositionMagnitude = toNextPathPosition.magnitude;
+
+                        targetVelocity = toNextPathPosition * unit.move.speed;
+                        // normalised only above 1 magnitude
+                        if (1f < toNextPathPositionMagnitude)
+                        {
+                            targetVelocity /= toNextPathPositionMagnitude;
+                        }
+
+                        Vector2 force = (targetVelocity - unit.move.rigidbody.velocity) * unit.move.rigidbody.mass;
                         float forceMag = force.magnitude;
                         if (forceMax < forceMag)
                         {
                             force *= forceMax / forceMag;
                         }
                         unit.move.rigidbody.AddForce(force, ForceMode2D.Impulse);
-                    }
-                    //else
-                    {
-                        // close enough
-                        //unit.move.rigidbody.MovePosition(nextPathPosition);
-                    }
 
-                    pathfinding.Insert(0, navigationGrid.GetIndex(elementSize, unitPosition));
+                        pathfinding.Insert(0, navigationGrid.GetIndex(elementSize, unitPosition));
+                    }
                 }
 
                 unit.currentBounds = new Bounds2D(unitCollider.bounds);
-                unit.navigationNode = NavigationNode.FromCollider(unitCollider, delta);
+                unit.navigationNode = NavigationNode.FromCollider(unitCollider,
+                    previousUnitBoundsCenter.HasValue ?
+                        (unit.currentBounds.center - previousUnitBoundsCenter.Value) :
+                        targetVelocity * Time.fixedDeltaTime);
                 navigationGrid.AddBounds(unit.currentBounds, unit.navigationNode, elementSize);
             }
         }

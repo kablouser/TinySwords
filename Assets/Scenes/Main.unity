@@ -265,6 +265,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Warrior_Blue_0 (2)
       objectReference: {fileID: 0}
+    - target: {fileID: 1497860968102947220, guid: 8ab79bf8143a5f944936eb012384b94a, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 7362680957085140064, guid: 8ab79bf8143a5f944936eb012384b94a, type: 3}
       propertyPath: m_RootOrder
       value: 15
@@ -601,6 +605,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Archer_Blue (4)
       objectReference: {fileID: 0}
+    - target: {fileID: 2124696156400692345, guid: d32565b0e4161bb4cb4cb526a7b1dbeb, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 8041291667065766285, guid: d32565b0e4161bb4cb4cb526a7b1dbeb, type: 3}
       propertyPath: m_RootOrder
       value: 31
@@ -672,6 +680,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Archer_Blue (1)
       objectReference: {fileID: 0}
+    - target: {fileID: 2124696156400692345, guid: d32565b0e4161bb4cb4cb526a7b1dbeb, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 8041291667065766285, guid: d32565b0e4161bb4cb4cb526a7b1dbeb, type: 3}
       propertyPath: m_RootOrder
       value: 28
@@ -737,6 +749,10 @@ PrefabInstance:
     - target: {fileID: 1497860968102947220, guid: 8ab79bf8143a5f944936eb012384b94a, type: 3}
       propertyPath: m_Name
       value: Warrior_Blue_0 (9)
+      objectReference: {fileID: 0}
+    - target: {fileID: 1497860968102947220, guid: 8ab79bf8143a5f944936eb012384b94a, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7362680957085140064, guid: 8ab79bf8143a5f944936eb012384b94a, type: 3}
       propertyPath: m_RootOrder
@@ -1189,6 +1205,9 @@ MonoBehaviour:
       index: 0
       version: 0
     hasLostValue: 0
+  cameraEdgeDragSpace: 70
+  cameraEdgeDragSpeed: 45
+  cameraMoveSpeed: 35
   units:
     elements: []
     versions: 00000000
@@ -1240,6 +1259,10 @@ PrefabInstance:
     - target: {fileID: 2124696156400692345, guid: d32565b0e4161bb4cb4cb526a7b1dbeb, type: 3}
       propertyPath: m_Name
       value: Archer_Blue (6)
+      objectReference: {fileID: 0}
+    - target: {fileID: 2124696156400692345, guid: d32565b0e4161bb4cb4cb526a7b1dbeb, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8041291667065766285, guid: d32565b0e4161bb4cb4cb526a7b1dbeb, type: 3}
       propertyPath: m_RootOrder
@@ -1307,6 +1330,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Warrior_Blue_0 (6)
       objectReference: {fileID: 0}
+    - target: {fileID: 1497860968102947220, guid: 8ab79bf8143a5f944936eb012384b94a, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 7362680957085140064, guid: 8ab79bf8143a5f944936eb012384b94a, type: 3}
       propertyPath: m_RootOrder
       value: 19
@@ -1367,6 +1394,10 @@ PrefabInstance:
     - target: {fileID: 1497860968102947220, guid: 8ab79bf8143a5f944936eb012384b94a, type: 3}
       propertyPath: m_Name
       value: Warrior_Blue_0 (11)
+      objectReference: {fileID: 0}
+    - target: {fileID: 1497860968102947220, guid: 8ab79bf8143a5f944936eb012384b94a, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7362680957085140064, guid: 8ab79bf8143a5f944936eb012384b94a, type: 3}
       propertyPath: m_RootOrder
@@ -1434,6 +1465,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Warrior_Blue_0 (4)
       objectReference: {fileID: 0}
+    - target: {fileID: 1497860968102947220, guid: 8ab79bf8143a5f944936eb012384b94a, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 7362680957085140064, guid: 8ab79bf8143a5f944936eb012384b94a, type: 3}
       propertyPath: m_RootOrder
       value: 17
@@ -1494,6 +1529,10 @@ PrefabInstance:
     - target: {fileID: 1497860968102947220, guid: 8ab79bf8143a5f944936eb012384b94a, type: 3}
       propertyPath: m_Name
       value: Warrior_Blue_0 (8)
+      objectReference: {fileID: 0}
+    - target: {fileID: 1497860968102947220, guid: 8ab79bf8143a5f944936eb012384b94a, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7362680957085140064, guid: 8ab79bf8143a5f944936eb012384b94a, type: 3}
       propertyPath: m_RootOrder
@@ -1566,6 +1605,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Warrior_Blue_0 (3)
       objectReference: {fileID: 0}
+    - target: {fileID: 1497860968102947220, guid: 8ab79bf8143a5f944936eb012384b94a, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 7362680957085140064, guid: 8ab79bf8143a5f944936eb012384b94a, type: 3}
       propertyPath: m_RootOrder
       value: 16
@@ -1626,6 +1669,10 @@ PrefabInstance:
     - target: {fileID: 1497860968102947220, guid: 8ab79bf8143a5f944936eb012384b94a, type: 3}
       propertyPath: m_Name
       value: Warrior_Blue_0 (7)
+      objectReference: {fileID: 0}
+    - target: {fileID: 1497860968102947220, guid: 8ab79bf8143a5f944936eb012384b94a, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7362680957085140064, guid: 8ab79bf8143a5f944936eb012384b94a, type: 3}
       propertyPath: m_RootOrder
@@ -1991,6 +2038,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Warrior_Blue_0 (1)
       objectReference: {fileID: 0}
+    - target: {fileID: 1497860968102947220, guid: 8ab79bf8143a5f944936eb012384b94a, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 7362680957085140064, guid: 8ab79bf8143a5f944936eb012384b94a, type: 3}
       propertyPath: m_RootOrder
       value: 14
@@ -2051,6 +2102,10 @@ PrefabInstance:
     - target: {fileID: 2124696156400692345, guid: d32565b0e4161bb4cb4cb526a7b1dbeb, type: 3}
       propertyPath: m_Name
       value: Archer_Blue (5)
+      objectReference: {fileID: 0}
+    - target: {fileID: 2124696156400692345, guid: d32565b0e4161bb4cb4cb526a7b1dbeb, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8041291667065766285, guid: d32565b0e4161bb4cb4cb526a7b1dbeb, type: 3}
       propertyPath: m_RootOrder
@@ -2118,6 +2173,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Warrior_Blue_0 (10)
       objectReference: {fileID: 0}
+    - target: {fileID: 1497860968102947220, guid: 8ab79bf8143a5f944936eb012384b94a, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 7362680957085140064, guid: 8ab79bf8143a5f944936eb012384b94a, type: 3}
       propertyPath: m_RootOrder
       value: 23
@@ -2183,6 +2242,10 @@ PrefabInstance:
     - target: {fileID: 1497860968102947220, guid: 8ab79bf8143a5f944936eb012384b94a, type: 3}
       propertyPath: m_Name
       value: Warrior_Blue_0 (5)
+      objectReference: {fileID: 0}
+    - target: {fileID: 1497860968102947220, guid: 8ab79bf8143a5f944936eb012384b94a, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7362680957085140064, guid: 8ab79bf8143a5f944936eb012384b94a, type: 3}
       propertyPath: m_RootOrder
@@ -2374,6 +2437,10 @@ PrefabInstance:
     - target: {fileID: 2124696156400692345, guid: d32565b0e4161bb4cb4cb526a7b1dbeb, type: 3}
       propertyPath: m_Name
       value: Archer_Blue (3)
+      objectReference: {fileID: 0}
+    - target: {fileID: 2124696156400692345, guid: d32565b0e4161bb4cb4cb526a7b1dbeb, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8041291667065766285, guid: d32565b0e4161bb4cb4cb526a7b1dbeb, type: 3}
       propertyPath: m_RootOrder
@@ -2571,6 +2638,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Archer_Blue (7)
       objectReference: {fileID: 0}
+    - target: {fileID: 2124696156400692345, guid: d32565b0e4161bb4cb4cb526a7b1dbeb, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 8041291667065766285, guid: d32565b0e4161bb4cb4cb526a7b1dbeb, type: 3}
       propertyPath: m_RootOrder
       value: 34
@@ -2637,6 +2708,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Warrior_Blue_0 (12)
       objectReference: {fileID: 0}
+    - target: {fileID: 1497860968102947220, guid: 8ab79bf8143a5f944936eb012384b94a, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 7362680957085140064, guid: 8ab79bf8143a5f944936eb012384b94a, type: 3}
       propertyPath: m_RootOrder
       value: 25
@@ -2702,6 +2777,10 @@ PrefabInstance:
     - target: {fileID: 1497860968102947220, guid: 8ab79bf8143a5f944936eb012384b94a, type: 3}
       propertyPath: m_Name
       value: Warrior_Blue_0 (13)
+      objectReference: {fileID: 0}
+    - target: {fileID: 1497860968102947220, guid: 8ab79bf8143a5f944936eb012384b94a, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7362680957085140064, guid: 8ab79bf8143a5f944936eb012384b94a, type: 3}
       propertyPath: m_RootOrder
@@ -3044,6 +3123,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Archer_Blue (2)
       objectReference: {fileID: 0}
+    - target: {fileID: 2124696156400692345, guid: d32565b0e4161bb4cb4cb526a7b1dbeb, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 8041291667065766285, guid: d32565b0e4161bb4cb4cb526a7b1dbeb, type: 3}
       propertyPath: m_RootOrder
       value: 29
@@ -3239,6 +3322,10 @@ PrefabInstance:
     - target: {fileID: 2124696156400692345, guid: d32565b0e4161bb4cb4cb526a7b1dbeb, type: 3}
       propertyPath: m_Name
       value: Archer_Blue
+      objectReference: {fileID: 0}
+    - target: {fileID: 2124696156400692345, guid: d32565b0e4161bb4cb4cb526a7b1dbeb, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8041291667065766285, guid: d32565b0e4161bb4cb4cb526a7b1dbeb, type: 3}
       propertyPath: m_RootOrder

@@ -15,4 +15,9 @@ public static class Extensions
     {
         return lhs.x * rhs.x + lhs.y * rhs.y;
     }
+
+    public static bool Approximately(float a, float b, float slack)
+    {
+        return Mathf.Abs(b - a) < slack;
+    }
 }

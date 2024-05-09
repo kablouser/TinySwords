@@ -60,7 +60,7 @@ public static class Pathfind
         }
 
         int maxMomentumScaled = Mathf.Max(1, Mathf.RoundToInt(maxRealMomentum * NavigationNode.MOMENTUM_SCALE));
-        float movableThresholdMomentumScaled = maxRealMomentum * NavigationNode.MOMENTUM_SCALE * 0.5f;
+        float movableThresholdMomentumScaled = maxRealMomentum * NavigationNode.MOMENTUM_SCALE * 0.9f;
 
         do
         {
@@ -78,7 +78,7 @@ public static class Pathfind
                 };
 
                 if (navigationGrid.nodes.TryIndex(neighbour, out NavigationNode neighbourMomentum) &&
-                    movableThresholdMomentumScaled <= currentToNeighbour.Dot(neighbourMomentum.CombineScaledMomentum(theoreticalMomentumInNeighbour)) / currentToNeighbourLength)
+                    movableThresholdMomentumScaled * currentToNeighbourLength <= currentToNeighbour.Dot(neighbourMomentum.CombineScaledMomentum(theoreticalMomentumInNeighbour)))
                 {
                     if (1.1f < currentToNeighbourLength)
                     {

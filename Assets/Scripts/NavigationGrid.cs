@@ -23,12 +23,13 @@ public struct NavigationNode
         };
     }
 
-    public static NavigationNode FromCollider(Collider2D collider, Vector2 velocity = new Vector2())
+    public static NavigationNode FromCollider(Collider2D collider, Vector2 fixedDelta = new Vector2())
     {
         Rigidbody2D rigidbody = collider.attachedRigidbody;
-        if (null != rigidbody && 0.01f < velocity.sqrMagnitude)
+        float movingThreshold = Time.fixedDeltaTime * 1.69f;
+        if (null != rigidbody && movingThreshold * movingThreshold < fixedDelta.sqrMagnitude)
         {
-            Vector2 scaledMomentum = rigidbody.mass * velocity * MOMENTUM_SCALE;
+            Vector2 scaledMomentum = rigidbody.mass * fixedDelta * MOMENTUM_SCALE;
             return new NavigationNode
             {
                 scaledMomentum = new Vector2Int(Mathf.RoundToInt(scaledMomentum.x), Mathf.RoundToInt(scaledMomentum.y)),
