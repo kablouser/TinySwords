@@ -93,10 +93,10 @@ public struct NavigationGrid
         };
     }
 
-    public void Snapshot()
+    public void Snapshot(LayerMask layerMask)
     {
         nodes = new Array2D<NavigationNode>(nodes.dimension0, nodes.dimension1);
-        Collider2D[] overlappedColliders = Physics2D.OverlapAreaAll(bounds.min, bounds.max);
+        Collider2D[] overlappedColliders = Physics2D.OverlapAreaAll(bounds.min, bounds.max, layerMask);
         Span<(Bounds2D, NavigationNode)> startBoundsAndMomentums = stackalloc (Bounds2D, NavigationNode)[overlappedColliders.Length];
         for (int i = 0; i < overlappedColliders.Length; ++i)
         {

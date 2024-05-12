@@ -56,12 +56,12 @@ namespace SerializableCollections.GUI
 					objectType = objectType.BaseType;
 				}
 
-				if (currentField == null && indexerProperty == null)
-					UnityEngine.Debug.Log(property.propertyPath + " - " + path[i].FieldName);
+				/*if (currentField == null && indexerProperty == null)
+					UnityEngine.Debug.Log(property.propertyPath + " - " + path[i].FieldName);*/
 
 				if (indexerProperty != null)
 					currentObject = indexerProperty.GetValue(currentObject, new object[] { path[i].ArrayIndex });
-				else
+				else if (currentField != null)
 					currentObject = currentField.GetValue(currentObject);
 
 				isInArray = false;

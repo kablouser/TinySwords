@@ -7,6 +7,10 @@ using static MainScript;
 using UnityEditor;
 #endif
 
+public enum SpriteSheetIndex { WarriorBlue, ArcherBlue };
+public enum AnimationClipIndex { WarriorStand, WarriorWalk };
+public enum UnitType { Warrior, Archer };
+
 [Serializable]
 public struct SpriteSheet
 {
@@ -54,6 +58,7 @@ public struct MoveComponent
 [Serializable]
 public struct UnitEntity
 {
+    public UnitType type;
     public Transform transform;
     public AnimationComponent animation;
     public MoveComponent move;
@@ -69,11 +74,9 @@ public class MainScript : MonoBehaviour
     public const float ANIMATION_FRAMERATE = 10f;
     public const int EXPECTED_SELECT_COUNT = 8;
 
-    public enum SpriteSheetIndex { WarriorBlue, ArcherBlue };
+
     [Header("Assets")]
     public List<SpriteSheet> spriteSheets;
-
-    public enum AnimationClipIndex { WarriorStand, WarriorWalk };
     public List<AnimationClip> animationClips;
 
     [Header("References")]
@@ -83,16 +86,21 @@ public class MainScript : MonoBehaviour
 
     [Header("Pathfinding")]
     public NavigationGrid navigationGrid;
+    public LayerMask navigationLayerMask;
 
     [Header("Selection")]
     public HashSetID currentSelectIDs;
     public List<GameObject> selectIcons;
+    public LayerMask selectionMask;
+    public float doubleSelectTimeThreshold = 0.4f;
+    public float currentSelectEndTime;
+
+    public HashSetID[] controlGroups;
 
     [Header("Box Select")]
-    public LayerMask boxSelectLayerMask;
     public Vector2 boxSelectPositionStart;
     public bool isBoxSelect;
-    public Collider2D[] boxSelectQuery;
+    public List<Collider2D> collider2DCache;
     public HashSetID boxSelectIDs;
 
     [Header("Camera controls")]
@@ -164,20 +172,31 @@ public class MainScript : MonoBehaviour
 
     void Start()
     {
-        Cursor.lockState = CursorLockMode.Confined;
-
-        navigationGrid.Snapshot();
-
-        QualitySettings.vSyncCount = 1;
-        boxSelectQuery = new Collider2D[EXPECTED_SELECT_COUNT];
-
         //TODO THINK
         pathfinding = new List<Vector2Int>();
         pathfindingVisitedFrom = new Dictionary<Vector2Int, Vector2Int>();
         pathfindingScores = new List<Pathfind.ScoreAStar>();
 
+        controlGroups = new HashSetID[22];
+        for(int i = 0; i < controlGroups.Length; ++i)
+        {
+            controlGroups[i] = new HashSetID();
+        }
+
+        collider2DCache = new List<Collider2D>(EXPECTED_SELECT_COUNT);
+
+        // not just transparency, all sprites are sorted lowerest y first, then lowest x
+        cameraMain.transparencySortMode = TransparencySortMode.CustomAxis;
+        cameraMain.transparencySortAxis = new Vector3(0.2f, 1.0f, 0.0f);
+
+        Cursor.lockState = CursorLockMode.Confined;
+
+        QualitySettings.vSyncCount = 1;
+
+        navigationGrid.Snapshot(navigationLayerMask);
+
 #if UNITY_EDITOR
-        //Application.targetFrameRate = 30;
+        Application.targetFrameRate = 60;
 
         units.SpawnRange(unitsDefaultDebug,
             (unitGameObject, id) =>
@@ -199,6 +218,7 @@ public class MainScript : MonoBehaviour
 
                 return new UnitEntity
                 {
+                    type = chooseSpritesheet == SpriteSheetIndex.WarriorBlue ? UnitType.Warrior : UnitType.Archer,
                     transform = unitGameObject.transform,
                     animation = new AnimationComponent
                     {
@@ -274,61 +294,45 @@ public class MainScript : MonoBehaviour
             {
                 bool isCurrentlyBoxSelecting = Input.GetMouseButton(0);
 
-                if (isCurrentlyBoxSelecting != isBoxSelect)
+                if (isCurrentlyBoxSelecting && !isBoxSelect)
                 {
-                    if (isBoxSelect)
-                    {
-                        // end
-                        boxSelector.enabled = false;
-                        (currentSelectIDs, boxSelectIDs) = (boxSelectIDs, currentSelectIDs);
-                        boxSelectIDs.Clear();
-                    }
-                    else
-                    {
-                        //start
-                        boxSelectPositionStart = GetMouseWorldPosition(ref mouseWorldPosition);
-                        boxSelector.transform.position = boxSelectPositionStart;
-                        boxSelector.enabled = true;
-                    }
+                    //start box select
+                    boxSelectPositionStart = GetMouseWorldPosition(ref mouseWorldPosition);
+                    boxSelector.transform.position = boxSelectPositionStart;
+                    boxSelector.enabled = true;
                 }
 
-                // we want to query at end too
+                // query. we want to query at end too
                 if (isBoxSelect || isCurrentlyBoxSelecting)
                 {
-                    boxSelectIDs.Clear();
-
+                    if (isCurrentlyBoxSelecting)
+                    {
+                        boxSelectIDs.Clear();
+                    }
                     Vector3 boxSelectPositionCurrent = GetMouseWorldPosition(ref mouseWorldPosition);
-                    int queryCount = Physics2D.OverlapAreaNonAlloc(
+                    int queryCount = Physics2D.OverlapArea(
                         boxSelectPositionStart,
                         boxSelectPositionCurrent,
-                        boxSelectQuery,
-                        boxSelectLayerMask);
+                        new ContactFilter2D()
+                        {
+                            layerMask = selectionMask
+                        },
+                        collider2DCache);
 
                     for (int i = 0; i < queryCount; ++i)
                     {
-                        if (boxSelectQuery[i])
+                        IDComponent idComp = collider2DCache[i].GetComponentInParent<IDComponent>();
+                        if (idComp)
                         {
-                            IDComponent idComp = boxSelectQuery[i].GetComponent<IDComponent>();
-                            if (idComp)
+                            if (units.IsValidID(idComp.id))
                             {
-                                if (units.IsValidID(idComp.id))
-                                {
-                                    boxSelectIDs.Add(idComp.id);
-                                }
+                                boxSelectIDs.Add(idComp.id);
                             }
                         }
                     }
 
-                    if (boxSelectQuery.Length <= queryCount)
-                    {
-                        // boxSelectQuery too small
-                        boxSelectQuery = new Collider2D[queryCount << 1];
-                    }
-                    else
-                    {
-                        // refs no longer used, help GC out
-                        Array.Clear(boxSelectQuery, 0, boxSelectQuery.Length);
-                    }
+                    // refs no longer used, help GC out
+                    collider2DCache.Clear();
 
                     if (isCurrentlyBoxSelecting)
                     {
@@ -336,6 +340,85 @@ public class MainScript : MonoBehaviour
                             boxSelectPositionCurrent.x - boxSelectPositionStart.x,
                            -boxSelectPositionCurrent.y + boxSelectPositionStart.y);
                     }
+                }
+
+                if (!isCurrentlyBoxSelecting && isBoxSelect)
+                {
+                    // end select (box select or double select)
+                    boxSelector.enabled = false;
+
+                    if (Time.time <= currentSelectEndTime + doubleSelectTimeThreshold)
+                    {
+                        // double select
+                        ID firstBoxSelectID = new ID();
+                        foreach (ID iterateID in boxSelectIDs)
+                        {
+                            firstBoxSelectID = iterateID;
+                            break;
+                        }
+
+                        // if present remove, if not present add
+                        if (units.IsValidID(firstBoxSelectID))
+                        {
+                            UnitType screenSelectUnitType = units.elements[firstBoxSelectID.index].type;
+
+                            int queryCount = Physics2D.OverlapArea(
+                                cameraMain.ScreenToWorldPoint(new Vector3()),
+                                cameraMain.ScreenToWorldPoint(new Vector3(cameraMain.pixelWidth, cameraMain.pixelHeight)),
+                                new ContactFilter2D()
+                                {
+                                    layerMask = selectionMask
+                                },
+                                collider2DCache);
+
+                            for (int i = 0; i < queryCount; ++i)
+                            {
+                                IDComponent idComp = collider2DCache[i].GetComponentInParent<IDComponent>();
+                                if (idComp &&
+                                    units.IsValidID(idComp.id) &&
+                                    units.elements[idComp.id.index].type == screenSelectUnitType)
+                                {
+                                    boxSelectIDs.Add(idComp.id);
+                                }
+                            }
+
+                            // refs no longer used, help GC out
+                            collider2DCache.Clear();
+                        }
+
+                    }
+                    currentSelectEndTime = Time.time;
+
+                    // union selections?
+                    if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
+                    {
+                        if (1 < boxSelectIDs.Count)
+                        {
+                            // append cur selected with box selected
+                            currentSelectIDs.UnionWith(boxSelectIDs);
+                        }
+                        else if (1 == boxSelectIDs.Count)
+                        {
+                            ID firstBoxSelectID = new ID();
+                            foreach (ID iterateID in boxSelectIDs)
+                            {
+                                firstBoxSelectID = iterateID;
+                                break;
+                            }
+                            // if present remove, if not present add
+                            if (!currentSelectIDs.Add(firstBoxSelectID))
+                            {
+                                currentSelectIDs.Remove(firstBoxSelectID);
+                            }
+                        }
+                    }
+                    // replace cur selected with box selected, swap containers
+                    else
+                    {
+                        (currentSelectIDs, boxSelectIDs) = (boxSelectIDs, currentSelectIDs);
+                    }
+
+                    boxSelectIDs.Clear();
                 }
 
                 isBoxSelect = isCurrentlyBoxSelecting;
@@ -398,6 +481,66 @@ public class MainScript : MonoBehaviour
             }
         }
 
+        // Control groups
+        {
+            int? downControlGroup = null;
+
+            for (KeyCode alphanumeric = KeyCode.Alpha0; alphanumeric < KeyCode.Alpha9; alphanumeric++)
+            {
+                if (Input.GetKeyDown(alphanumeric))
+                {
+                    downControlGroup = alphanumeric - KeyCode.Alpha0;
+                    break;
+                }
+            }
+
+            if (!downControlGroup.HasValue)
+            {
+                for (KeyCode keypadKey = KeyCode.Keypad0; keypadKey < KeyCode.Keypad9; keypadKey++)
+                {
+                    if (Input.GetKeyDown(keypadKey))
+                    {
+                        downControlGroup = keypadKey - KeyCode.Keypad0;
+                        break;
+                    }
+                }
+            }
+
+            if (!downControlGroup.HasValue)
+            {
+                for (KeyCode fnKey = KeyCode.F1; fnKey < KeyCode.F12; fnKey++)
+                {
+                    if (Input.GetKeyDown(fnKey))
+                    {
+                        downControlGroup = fnKey - KeyCode.F1 + 10 /*after alphanumerics*/;
+                        break;
+                    }
+                }
+            }
+
+            if (downControlGroup.HasValue)
+            {
+                HashSetID controlGroup = controlGroups[downControlGroup.Value];
+
+                if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))
+                {
+                    if (!Input.GetKey(KeyCode.LeftShift) && !Input.GetKey(KeyCode.RightShift))
+                    {
+                        // if shift is not held, control group is replaced
+                        controlGroup.Clear();
+                    }
+
+                    controlGroup.UnionWith(currentSelectIDs);
+                }
+                else
+                {
+                    // select control group
+                    currentSelectIDs.Clear();
+                    currentSelectIDs.UnionWith(controlGroup);
+                }
+            }
+        }
+
         // Camera controls
         {
             Vector2 moveInput = new Vector2(
@@ -412,7 +555,7 @@ public class MainScript : MonoBehaviour
             if (moveInput.sqrMagnitude < Mathf.Epsilon * 8f && Input.mousePresent)
             {
                 Vector2 mousePosition = Input.mousePosition;
-                Vector2 screenDimensions = new Vector2(Screen.width, Screen.height);
+                Vector2 screenDimensions = new Vector2(cameraMain.pixelWidth, cameraMain.pixelHeight);
 
                 float? dragSpace = null;
                 if (mousePosition.x <= cameraEdgeDragSpace)
@@ -439,7 +582,15 @@ public class MainScript : MonoBehaviour
                 }
             }
 
-            cameraMain.transform.Translate(moveInput * Time.deltaTime);
+            moveInput *= Time.deltaTime;
+            if (0f < moveInput.sqrMagnitude)
+            {
+                Transform cameraTransform = cameraMain.transform;
+                Vector2 cameraPosition = cameraTransform.position;
+                cameraTransform.position = new Vector3(
+                    Mathf.Clamp(cameraPosition.x + moveInput.x, navigationGrid.bounds.min.x, navigationGrid.bounds.max.x),
+                    Mathf.Clamp(cameraPosition.y + moveInput.y, navigationGrid.bounds.min.y, navigationGrid.bounds.max.y), 0f);
+            }
         }
 
         if (Input.GetKeyDown(KeyCode.E))

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -19,5 +20,17 @@ public static class Extensions
     public static bool Approximately(float a, float b, float slack)
     {
         return Mathf.Abs(b - a) < slack;
+    }
+
+    public static void ReserveArrayClear<T>(ref T[] array, int capacity)
+    {
+        if (array.Length <= capacity)
+        {
+            array = new T[capacity << 1];
+        }
+        else
+        {
+            Array.Clear(array, 0, capacity);
+        }
     }
 }

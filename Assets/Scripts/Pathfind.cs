@@ -55,7 +55,7 @@ public static class Pathfind
                 navigationGrid.nodes.TryIndex(endIndex, out NavigationNode endNavigationNode) &&
                 endNavigationNode.blocking == 0 ?
                     200 : // end is unblocked, there could be a path
-                    40; // end is blocked, there's no path, find somewhere nearby
+                    100; // end is blocked, there's no path, find somewhere nearby
             maxIts = Mathf.Min(maxIts, navigationGrid.nodes.dimension0 * navigationGrid.nodes.dimension1);
         }
 
