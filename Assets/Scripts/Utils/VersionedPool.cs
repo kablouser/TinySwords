@@ -18,6 +18,22 @@ public struct ID
     {
         return a.type == b.type && a.index == b.index && a.version == b.version;
     }
+
+    public static bool operator ==(in ID a, in ID b)
+    {
+        return
+            a.type == b.type &&
+            a.index == b.index &&
+            a.version == b.version;
+    }
+
+    public static bool operator !=(in ID a, in ID b)
+    {
+        return
+            a.type != b.type ||
+            a.index != b.index ||
+            a.version != b.version;
+    }
 }
 
 [Serializable]

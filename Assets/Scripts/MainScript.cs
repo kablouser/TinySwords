@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using static MainScript;
+using UnityEngine.U2D;
+using System.Linq;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -10,6 +11,7 @@ using UnityEditor;
 public enum SpriteSheetIndex { WarriorBlue, ArcherBlue };
 public enum AnimationClipIndex { WarriorStand, WarriorWalk };
 public enum UnitType { Warrior, Archer };
+public enum LeftClickCommand { None, Move, Attack };
 
 [Serializable]
 public struct SpriteSheet
@@ -56,14 +58,32 @@ public struct MoveComponent
 }
 
 [Serializable]
+public struct AttackComponent
+{
+    public float attackEndTime;
+    public bool isAttackMoving;
+}
+
+[Serializable]
+public struct DefendComponent
+{
+    public int
+        health,
+        maxHealth;
+}
+
+[Serializable]
 public struct UnitEntity
 {
     public UnitType type;
+    public int team;
     public Transform transform;
     public AnimationComponent animation;
     public MoveComponent move;
     public Bounds2D currentBounds;
-    public NavigationNode navigationNode;
+    public NavigationNode navigationChangeInBounds;
+    public AttackComponent attack;
+    public DefendComponent defend;
 }
 
 [Serializable]
@@ -74,13 +94,13 @@ public class MainScript : MonoBehaviour
     public const float ANIMATION_FRAMERATE = 10f;
     public const int EXPECTED_SELECT_COUNT = 8;
 
-
     [Header("Assets")]
     public List<SpriteSheet> spriteSheets;
     public List<AnimationClip> animationClips;
 
     [Header("References")]
-    public Camera cameraMain;
+    public Camera mainCamera;
+    public PixelPerfectCamera mainPixelPerfectCamera;
     public GameObject selectIconPrefab;
     public SpriteRenderer boxSelector;
 
@@ -94,6 +114,8 @@ public class MainScript : MonoBehaviour
     public LayerMask selectionMask;
     public float doubleSelectTimeThreshold = 0.4f;
     public float currentSelectEndTime;
+    // valid id if last select has only 1 result, used for detecting double select
+    public ID lastSelectIfSingle;
 
     public HashSetID[] controlGroups;
 
@@ -103,10 +125,17 @@ public class MainScript : MonoBehaviour
     public List<Collider2D> collider2DCache;
     public HashSetID boxSelectIDs;
 
+    [Header("Left Click Command")]
+    public LeftClickCommand leftClickCommand;
+
     [Header("Camera controls")]
     public float cameraEdgeDragSpace = 20f;
     public float cameraEdgeDragSpeed = 1f;
     public float cameraMoveSpeed = 1f;
+
+    public float cameraZoomSpeed = 1f;
+    public float cameraAssetsPPU = 64.0f;
+    public Vector2Int cameraAssetsPPURange;
 
     [Header("Entities")]
     public VersionedPool<UnitEntity> units;
@@ -186,11 +215,10 @@ public class MainScript : MonoBehaviour
         collider2DCache = new List<Collider2D>(EXPECTED_SELECT_COUNT);
 
         // not just transparency, all sprites are sorted lowerest y first, then lowest x
-        cameraMain.transparencySortMode = TransparencySortMode.CustomAxis;
-        cameraMain.transparencySortAxis = new Vector3(0.2f, 1.0f, 0.0f);
+        mainCamera.transparencySortMode = TransparencySortMode.CustomAxis;
+        mainCamera.transparencySortAxis = new Vector3(0.2f, 1.0f, 0.0f);
 
         Cursor.lockState = CursorLockMode.Confined;
-
         QualitySettings.vSyncCount = 1;
 
         navigationGrid.Snapshot(navigationLayerMask);
@@ -219,6 +247,7 @@ public class MainScript : MonoBehaviour
                 return new UnitEntity
                 {
                     type = chooseSpritesheet == SpriteSheetIndex.WarriorBlue ? UnitType.Warrior : UnitType.Archer,
+                    team = 0,
                     transform = unitGameObject.transform,
                     animation = new AnimationComponent
                     {
@@ -234,7 +263,17 @@ public class MainScript : MonoBehaviour
                         speed = 10f,
                     },
                     currentBounds = new Bounds2D(collider.bounds),
-                    navigationNode = NavigationNode.Blocking(),
+                    navigationChangeInBounds = NavigationNode.Blocking(),
+                    attack = new AttackComponent
+                    {
+                        attackEndTime = 0f,
+                        isAttackMoving = false,
+                    },
+                    defend = new DefendComponent
+                    {
+                        health = 10,
+                        maxHealth = 10,
+                    },
                 };
             });
 #endif
@@ -277,20 +316,23 @@ public class MainScript : MonoBehaviour
             }
         }
 
+        // todo detect keyboard keys, then change left click commands accordingly
+
         // Requires mouse world position
         {
             Vector2? mouseWorldPosition = null;
-
             Vector2 GetMouseWorldPosition(ref Vector2? mouseWorldPosition)
             {
                 if (!mouseWorldPosition.HasValue)
                 {
-                    mouseWorldPosition = cameraMain.ScreenToWorldPoint(Input.mousePosition);
+                    mouseWorldPosition = mainCamera.ScreenToWorldPoint(Input.mousePosition);
                 }
                 return mouseWorldPosition.Value;
             }
 
             // Box selecting update
+            // todo change for box select left click command targets
+            if (leftClickCommand == LeftClickCommand.None)
             {
                 bool isCurrentlyBoxSelecting = Input.GetMouseButton(0);
 
@@ -346,25 +388,22 @@ public class MainScript : MonoBehaviour
                 {
                     // end select (box select or double select)
                     boxSelector.enabled = false;
+                    bool isDoubleSelect = false;
 
                     if (Time.time <= currentSelectEndTime + doubleSelectTimeThreshold)
                     {
                         // double select
-                        ID firstBoxSelectID = new ID();
-                        foreach (ID iterateID in boxSelectIDs)
-                        {
-                            firstBoxSelectID = iterateID;
-                            break;
-                        }
+                        isDoubleSelect = true;
+                        ID firstBoxSelectID = boxSelectIDs.FirstOrDefault();
 
-                        // if present remove, if not present add
-                        if (units.IsValidID(firstBoxSelectID))
+                        if (lastSelectIfSingle == firstBoxSelectID /* select previous must match */ &&
+                            units.IsValidID(firstBoxSelectID) /* if present remove, if not present add */)
                         {
                             UnitType screenSelectUnitType = units.elements[firstBoxSelectID.index].type;
 
                             int queryCount = Physics2D.OverlapArea(
-                                cameraMain.ScreenToWorldPoint(new Vector3()),
-                                cameraMain.ScreenToWorldPoint(new Vector3(cameraMain.pixelWidth, cameraMain.pixelHeight)),
+                                mainCamera.ScreenToWorldPoint(new Vector3()),
+                                mainCamera.ScreenToWorldPoint(new Vector3(mainCamera.pixelWidth, mainCamera.pixelHeight)),
                                 new ContactFilter2D()
                                 {
                                     layerMask = selectionMask
@@ -389,22 +428,22 @@ public class MainScript : MonoBehaviour
                     }
                     currentSelectEndTime = Time.time;
 
+                    lastSelectIfSingle = boxSelectIDs.Count == 1 ?
+                        boxSelectIDs.FirstOrDefault() :
+                        new ID();
+
                     // union selections?
                     if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
                     {
-                        if (1 < boxSelectIDs.Count)
+                        if (1 < boxSelectIDs.Count || isDoubleSelect /* if isDoubleSelect don't toggle selection */)
                         {
                             // append cur selected with box selected
                             currentSelectIDs.UnionWith(boxSelectIDs);
                         }
                         else if (1 == boxSelectIDs.Count)
                         {
-                            ID firstBoxSelectID = new ID();
-                            foreach (ID iterateID in boxSelectIDs)
-                            {
-                                firstBoxSelectID = iterateID;
-                                break;
-                            }
+                            // if only selected 1 unit, toggle selection on/off
+                            ID firstBoxSelectID = boxSelectIDs.FirstOrDefault();
                             // if present remove, if not present add
                             if (!currentSelectIDs.Add(firstBoxSelectID))
                             {
@@ -422,6 +461,12 @@ public class MainScript : MonoBehaviour
                 }
 
                 isBoxSelect = isCurrentlyBoxSelecting;
+            }
+            else
+            {
+                isBoxSelect = false;
+
+                // todo detect left click, then execute command
             }
 
             // Select Icons Placement
@@ -479,6 +524,8 @@ public class MainScript : MonoBehaviour
                     }
                 }
             }
+
+            // Left-click
         }
 
         // Control groups
@@ -543,6 +590,7 @@ public class MainScript : MonoBehaviour
 
         // Camera controls
         {
+            // translate controls
             Vector2 moveInput = new Vector2(
                 Input.GetAxis(ConstStrings.Horizontal),
                 Input.GetAxis(ConstStrings.Vertical));
@@ -552,10 +600,11 @@ public class MainScript : MonoBehaviour
             }
             moveInput *= cameraMoveSpeed;
 
+            // screen drag
             if (moveInput.sqrMagnitude < Mathf.Epsilon * 8f && Input.mousePresent)
             {
                 Vector2 mousePosition = Input.mousePosition;
-                Vector2 screenDimensions = new Vector2(cameraMain.pixelWidth, cameraMain.pixelHeight);
+                Vector2 screenDimensions = new Vector2(mainCamera.pixelWidth, mainCamera.pixelHeight);
 
                 float? dragSpace = null;
                 if (mousePosition.x <= cameraEdgeDragSpace)
@@ -582,20 +631,28 @@ public class MainScript : MonoBehaviour
                 }
             }
 
+            // apply translate
             moveInput *= Time.deltaTime;
             if (0f < moveInput.sqrMagnitude)
             {
-                Transform cameraTransform = cameraMain.transform;
+                Transform cameraTransform = mainCamera.transform;
                 Vector2 cameraPosition = cameraTransform.position;
                 cameraTransform.position = new Vector3(
                     Mathf.Clamp(cameraPosition.x + moveInput.x, navigationGrid.bounds.min.x, navigationGrid.bounds.max.x),
                     Mathf.Clamp(cameraPosition.y + moveInput.y, navigationGrid.bounds.min.y, navigationGrid.bounds.max.y), 0f);
             }
-        }
 
-        if (Input.GetKeyDown(KeyCode.E))
-        {
-            GizmosMode = 1 - GizmosMode;
+            // zoom
+            float mouseScrollY = Input.mouseScrollDelta.y;
+            if (Mathf.Epsilon * 8f < Mathf.Abs(mouseScrollY))
+            {
+                cameraAssetsPPU = Mathf.Clamp(
+                    cameraAssetsPPU + mouseScrollY * cameraZoomSpeed * Time.deltaTime,
+                    cameraAssetsPPURange.x,
+                    cameraAssetsPPURange.y);
+
+                mainPixelPerfectCamera.assetsPPU = Mathf.RoundToInt(cameraAssetsPPU);
+            }
         }
     }
 
@@ -619,7 +676,7 @@ public class MainScript : MonoBehaviour
 
                 if (unit.currentBounds.min.x != float.NaN)
                 {
-                    navigationGrid.AddBounds(unit.currentBounds, -unit.navigationNode, elementSize);
+                    navigationGrid.AddBounds(unit.currentBounds, -unit.navigationChangeInBounds, elementSize);
                     previousUnitBoundsCenter = unit.currentBounds.center;
                 }
 
@@ -660,41 +717,11 @@ public class MainScript : MonoBehaviour
                 }
 
                 unit.currentBounds = new Bounds2D(unitCollider.bounds);
-                unit.navigationNode = NavigationNode.FromCollider(unitCollider,
+                unit.navigationChangeInBounds = NavigationNode.FromCollider(unitCollider,
                     previousUnitBoundsCenter.HasValue ?
                         (unit.currentBounds.center - previousUnitBoundsCenter.Value) :
                         targetVelocity * Time.fixedDeltaTime);
-                navigationGrid.AddBounds(unit.currentBounds, unit.navigationNode, elementSize);
-            }
-        }
-    }
-
-    public int GizmosMode = 0;
-
-    private void OnDrawGizmos()
-    {
-        Vector2 halfElementSize = navigationGrid.GetElementSize() / 2.0f;
-        Vector2 boundsSize = navigationGrid.bounds.size;
-
-        if (GizmosMode == 0 && pathfinding != null)
-        {
-            Gizmos.color = Color.red;
-            for (int i = 1; i < pathfinding.Count; i++)
-            {
-                GizmosMore.DrawArrow(
-                    navigationGrid.GetElementWorldPosition(boundsSize, halfElementSize, pathfinding[i - 1]),
-                    navigationGrid.GetElementWorldPosition(boundsSize, halfElementSize, pathfinding[i]));
-            }
-        }
-        if (GizmosMode == 1 && pathfindingVisitedFrom != null)
-        {
-
-            Gizmos.color = Color.green;
-            foreach (var kvp in pathfindingVisitedFrom)
-            {
-                GizmosMore.DrawArrow(
-                    navigationGrid.GetElementWorldPosition(boundsSize, halfElementSize, kvp.Value),
-                    navigationGrid.GetElementWorldPosition(boundsSize, halfElementSize, kvp.Key));
+                navigationGrid.AddBounds(unit.currentBounds, unit.navigationChangeInBounds, elementSize);
             }
         }
     }

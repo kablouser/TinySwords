@@ -1173,7 +1173,8 @@ MonoBehaviour:
     startIndex: 6
     endIndex: 11
     isRepeat: 1
-  cameraMain: {fileID: 519420031}
+  mainCamera: {fileID: 519420031}
+  mainPixelPerfectCamera: {fileID: 519420033}
   selectIconPrefab: {fileID: 8695117606387749412, guid: 4f889644051a1f74798bad769ac7858a, type: 3}
   boxSelector: {fileID: 1367866290}
   navigationGrid:
@@ -1214,6 +1215,10 @@ MonoBehaviour:
   cameraEdgeDragSpace: 70
   cameraEdgeDragSpeed: 45
   cameraMoveSpeed: 35
+  cameraZoomSpeed: 1
+  cameraAssetsPPUOriginal: -1
+  cameraAssetsPPUFactor: 1
+  cameraAssetsPPURange: {x: 0, y: 0}
   units:
     elements: []
     versions: 00000000
@@ -1248,7 +1253,6 @@ MonoBehaviour:
   setNavigationGridElementSize: {x: 1, y: 1}
   pathfinding: []
   forceMax: 3
-  GizmosMode: 0
 --- !u!1 &633452853 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 1497860968102947220, guid: 8ab79bf8143a5f944936eb012384b94a, type: 3}
