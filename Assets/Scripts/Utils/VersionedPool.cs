@@ -34,6 +34,16 @@ public struct ID
             a.index != b.index ||
             a.version != b.version;
     }
+
+    public override bool Equals(object _)
+    {
+        return false;
+    }
+
+    public override int GetHashCode()
+    {
+        return 0;
+    }
 }
 
 [Serializable]
@@ -79,6 +89,9 @@ public struct VersionedPool<T> where T : struct
         if (IsValidID(id))
         {
             isUsing[id.index] = false;
+#if UNITY_EDITOR // validation
+            elements[id.index] = default;
+#endif
             return true;
         }
         return false;
@@ -90,9 +103,9 @@ public struct VersionedPool<T> where T : struct
     }
 
     // enumerator over using indices
-    public VersionedPoolEnumerator<T> GetEnumerator()
+    public VersionedPoolUsingEnumerator<T> GetEnumerator()
     {
-        return new VersionedPoolEnumerator<T>(this);
+        return new VersionedPoolUsingEnumerator<T>(this);
     }
 
     public ID GetCurrentID(int index)
@@ -130,14 +143,26 @@ public struct VersionedPool<T> where T : struct
             elements[id.index] = convert(x, id);
         }
     }
+
+    public void Clear()
+    {
+        elements.Clear();
+        versions.Clear();
+        isUsing.Clear();
+    }
+
+    public bool Validate()
+    {
+        return elements.Count == versions.Count && elements.Count == isUsing.Count;
+    }
 }
 
-public struct VersionedPoolEnumerator<T> where T : struct
+public struct VersionedPoolUsingEnumerator<T> where T : struct
 {
     public int index;
     public VersionedPool<T> pool;
 
-    public VersionedPoolEnumerator(in VersionedPool<T> pool)
+    public VersionedPoolUsingEnumerator(in VersionedPool<T> pool)
     {
         index = -1;
         this.pool = pool;

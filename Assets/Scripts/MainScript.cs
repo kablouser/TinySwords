@@ -8,16 +8,45 @@ using System.Linq;
 using UnityEditor;
 #endif
 
-public enum SpriteSheetIndex { WarriorBlue, ArcherBlue };
-public enum AnimationClipIndex { WarriorStand, WarriorWalk };
-public enum UnitType { Warrior, Archer };
+public enum SpriteSheetIndex
+{
+    BarrelBlue, BarrelPurple, BarrelRed, BarrelYellow,
+    TNTBlue, TNTPurple, TNTRed, TNTYellow,
+    TorchBlue, TorchPurple, TorchRed, TorchYellow,
+
+    ArcherBlue, ArcherPurple, ArcherRed, ArcherYellow,
+    PawnBlue, PawnPurple, PawnRed, PawnYellow,
+    WarriorBlue, WarriorPurple, WarriorRed, WarriorYellow,
+};
+
+public enum AnimationClipIndex
+{
+    BarrelSit, BarrelUp, BarrelDown, BarrelWalk, BarrelExplode,
+    TNTStand, TNTWalk, TNTThrow,
+    TorchStand, TorchWalk, TorchHitRight, TorchHitDown, TorchHitUp,
+
+    ArcherStand, ArcherWalk, ArcherShootUp, ArcherShootUpRight, ArcherShootRight, ArcherShootDownRight, ArcherShootDown,
+    PawnStand, PawnWalk, PawnHammer, PawnAxe, PawnCarryStand, PawnCarryWalk,
+    WarriorStand, WarriorWalk, WarriorSwordRight0, WarriorSwordRight1, WarriorSwordDown0, WarriorSwordDown1, WarriorSwordUp0, WarriorSwordUp1,
+};
+
+public enum UnitType
+{
+    Barrel,
+    TNT,
+    Torch,
+
+    Archer,
+    Pawn,
+    Warrior,
+};
 public enum LeftClickCommand { None, Move, Attack };
 
 [Serializable]
 public struct SpriteSheet
 {
 #if UNITY_EDITOR
-    [TextArea(0, 3)]
+    [TextArea(0,3)]
     public string name;
 #endif
 
@@ -35,8 +64,10 @@ public struct AnimationClip
     public int startIndex;
     public int endIndex;
     public bool isRepeat;
+    // special event at this frame
+    public int eventIndex;
 
-    public readonly int GetDuration => endIndex - startIndex + 1;
+    public readonly int GetFrameCount => endIndex - startIndex + 1;
     public readonly bool IsValid => startIndex <= endIndex;
 }
 
@@ -45,7 +76,7 @@ public struct AnimationComponent
 {
     public SpriteSheetIndex spriteSheetIndex;
     public AnimationClipIndex animationClipIndex;
-    public float currentIndex;
+    public int currentIndex;
     public SpriteRenderer spriteRenderer;
 }
 
@@ -60,8 +91,11 @@ public struct MoveComponent
 [Serializable]
 public struct AttackComponent
 {
-    public float attackEndTime;
     public bool isAttackMoving;
+    public bool isAttacking;
+    public float attackEndTime;
+    public ID target;
+    public int nextDamage;
 }
 
 [Serializable]
@@ -87,12 +121,20 @@ public struct UnitEntity
 }
 
 [Serializable]
+public struct AnimationEvent
+{
+    public ID id;
+    public AnimationClipIndex clip;
+}
+
+[Serializable]
 public class HashSetID : SerializableCollections.HashSet<ID> { }
 
 public class MainScript : MonoBehaviour
 {
-    public const float ANIMATION_FRAMERATE = 10f;
+    public const float ANIMATION_FRAMERATE = 1f;// 10f;
     public const int EXPECTED_SELECT_COUNT = 8;
+    public const float FORCE_MAX = 5f;
 
     [Header("Assets")]
     public List<SpriteSheet> spriteSheets;
@@ -107,6 +149,14 @@ public class MainScript : MonoBehaviour
     [Header("Pathfinding")]
     public NavigationGrid navigationGrid;
     public LayerMask navigationLayerMask;
+
+    [Header("Animation")]
+    // time before next animation frame update
+    public float animationAccumulateFrames;
+    // special events specified in non-looping clips
+    public List<AnimationEvent> animationSpecialEvents;
+    // end of animation reached in non-looping clips
+    public List<AnimationEvent> animationEndEvents;
 
     [Header("Selection")]
     public HashSetID currentSelectIDs;
@@ -140,12 +190,18 @@ public class MainScript : MonoBehaviour
     [Header("Entities")]
     public VersionedPool<UnitEntity> units;
 
+    [Header("Pathfinding Cache")]
+    public List<Vector2Int> pathfinding;
+    public Dictionary<Vector2Int, Vector2Int> pathfindingVisitedFrom;
+    public List<Pathfind.ScoreAStar> pathfindingScores;
+
 #if UNITY_EDITOR
     [Header("EDITOR ONLY")]
     public List<GameObject> unitsDefaultDebug;
 
     public Bounds2D setNavigationGridBoundsSize;
     public Vector2 setNavigationGridElementSize;
+
     [ContextMenu("_SetNavigationGridElementSize")]
     void SetNavigationGridElementSize()
     {
@@ -153,7 +209,7 @@ public class MainScript : MonoBehaviour
         navigationGrid.SetElementSizeUninitialised(setNavigationGridBoundsSize, setNavigationGridElementSize);
     }
 
-    void DefaultEnumNamesIterate<TEnum, TStruct>(ref List<TStruct> outList, Func<TStruct, string, TStruct> setName) where TStruct : struct
+    void DefaultEnumNamesIterate<TEnum, TStruct>(ref List<TStruct> outList, TStruct defaultStruct, Func<TStruct, string, TStruct> setName) where TStruct : struct
     {
         string[] names = Enum.GetNames(typeof(TEnum));
 
@@ -164,7 +220,7 @@ public class MainScript : MonoBehaviour
 
         while (outList.Count < names.Length)
         {
-            outList.Add(new TStruct());
+            outList.Add(defaultStruct);
         }
 
         for (int i = 0; i < outList.Count; i++)
@@ -187,8 +243,20 @@ public class MainScript : MonoBehaviour
     void DefaultEnumNames()
     {
         Undo.RecordObject(this, "DefaultEnumNames");
-        DefaultEnumNamesIterate<SpriteSheetIndex, SpriteSheet>(ref spriteSheets, (inS, inName) => { inS.name = inName; return inS; });
-        DefaultEnumNamesIterate<AnimationClipIndex, AnimationClip>(ref animationClips, (inS, inName) => { inS.name = inName; return inS; });
+        DefaultEnumNamesIterate<SpriteSheetIndex, SpriteSheet>(ref spriteSheets, default, (inS, inName) => { inS.name = inName; return inS; });
+        DefaultEnumNamesIterate<AnimationClipIndex, AnimationClip>(ref animationClips,
+            new AnimationClip
+            {
+                // -1 means invalid
+                eventIndex = -1,
+            },
+            (inS, inName) => { inS.name = inName; return inS; });
+
+        // clear all events
+/*        foreach (ref var x in animationClips.AsSpan())
+        {
+            x.eventIndex = -1;
+        }*/
     }
 
     [ContextMenu("_Prepopulate Pools")]
@@ -226,6 +294,11 @@ public class MainScript : MonoBehaviour
 #if UNITY_EDITOR
         Application.targetFrameRate = 60;
 
+        if (!units.Validate())
+        {
+            Debug.LogError("units wrong data, please clear");
+            units.Clear();
+        }
         units.SpawnRange(unitsDefaultDebug,
             (unitGameObject, id) =>
             {
@@ -233,27 +306,28 @@ public class MainScript : MonoBehaviour
                 Collider2D collider = unitGameObject.GetComponent<Collider2D>();
                 SpriteRenderer spriteRenderer = unitGameObject.GetComponent<SpriteRenderer>();
                 Rigidbody2D rigidbody2D = unitGameObject.GetComponent<Rigidbody2D>();
-                SpriteSheetIndex chooseSpritesheet;
+                SpriteSheetIndex chooseSpritesheet = SpriteSheetIndex.ArcherBlue;
+                AnimationClipIndex chooseAnimationClip = AnimationClipIndex.ArcherShootDownRight;
 
-                if (spriteRenderer.sprite == spriteSheets[0].spriteSheet[0])
+/*                if (spriteRenderer.sprite == spriteSheets[0].spriteSheet[0])
                 {
                     chooseSpritesheet = SpriteSheetIndex.WarriorBlue;
                 }
                 else
                 {
                     chooseSpritesheet = SpriteSheetIndex.ArcherBlue;
-                }
+                }*/
 
                 return new UnitEntity
                 {
-                    type = chooseSpritesheet == SpriteSheetIndex.WarriorBlue ? UnitType.Warrior : UnitType.Archer,
+                    type = UnitType.Archer,
                     team = 0,
                     transform = unitGameObject.transform,
                     animation = new AnimationComponent
                     {
                         spriteSheetIndex = chooseSpritesheet,
-                        animationClipIndex = AnimationClipIndex.WarriorStand,
-                        currentIndex = 0f,
+                        animationClipIndex = chooseAnimationClip,
+                        currentIndex = 0,
                         spriteRenderer = spriteRenderer,
                     },
                     move = new MoveComponent
@@ -284,41 +358,94 @@ public class MainScript : MonoBehaviour
     void Update()
     {
         // Animation update
+        animationAccumulateFrames += Time.deltaTime * ANIMATION_FRAMERATE;
+        if (1f < animationAccumulateFrames)
         {
-            Span<UnitEntity> unitsSpan = units.elements.AsSpan();
-            foreach (ref UnitEntity unit in unitsSpan)
             {
-                ref AnimationComponent animationComponent = ref unit.animation;
+                int animateFrames = Mathf.FloorToInt(animationAccumulateFrames);
+                animationAccumulateFrames -= animateFrames;
 
-                List<Sprite> spriteSheet = spriteSheets[(int)animationComponent.spriteSheetIndex].spriteSheet;
-                AnimationClip clip = animationClips[(int)animationComponent.animationClipIndex];
-
-                if (!clip.IsValid)
-                    continue;
-
-                float clipDuration = clip.GetDuration;
-
-                animationComponent.currentIndex += Time.deltaTime * ANIMATION_FRAMERATE;
-                if (clip.isRepeat)
+                Span<UnitEntity> unitsSpan = units.elements.AsSpan();
+                Span<AnimationClip> animationClipsSpan = animationClips.AsSpan();
+                foreach (int unitIndex in units)
                 {
-                    while (clipDuration < animationComponent.currentIndex)
+                    ref UnitEntity unit = ref unitsSpan[unitIndex];
+                    ref AnimationComponent animationComponent = ref unit.animation;
+
+                    List<Sprite> spriteSheet = spriteSheets[(int)animationComponent.spriteSheetIndex].spriteSheet;
+                    ref AnimationClip clip = ref animationClipsSpan[(int)animationComponent.animationClipIndex];
+
+                    // prevent infinite while loop
+                    if (!clip.IsValid)
+                        continue;
+
+                    int frameCount = clip.GetFrameCount;
+                    int lastIndex = animationComponent.currentIndex;
+                    int lastIndexInClip = lastIndex + clip.startIndex;
+                    animationComponent.currentIndex += animateFrames;
+                    if (clip.isRepeat)
                     {
-                        animationComponent.currentIndex -= clipDuration;
+                        animationComponent.currentIndex -= animationComponent.currentIndex / frameCount * frameCount;
+#if UNITY_EDITOR
+                        // events in repeated
+                        if (0 <= clip.eventIndex)
+                        {
+                            Debug.LogError("Not implemented");
+                        }
+#endif
                     }
-                }
-                else
-                {
-                    animationComponent.currentIndex = Mathf.Clamp(animationComponent.currentIndex, 0f, clipDuration);
-                }
+                    else
+                    {
+                        int currentIndexInClip = animationComponent.currentIndex + clip.startIndex;
+                        if (lastIndexInClip < clip.eventIndex && clip.eventIndex <= currentIndexInClip)
+                        {
+                            animationSpecialEvents.Add(new AnimationEvent
+                            {
+                                id = units.GetCurrentID(unitIndex),
+                                clip = animationComponent.animationClipIndex
+                            });
+                        }
+                        if (lastIndexInClip < clip.endIndex && clip.endIndex <= currentIndexInClip)
+                        {
+                            animationEndEvents.Add(new AnimationEvent
+                            {
+                                id = units.GetCurrentID(unitIndex),
+                                clip = animationComponent.animationClipIndex
+                            });
+                        }
+                    }
 
-                int spriteIndex = Mathf.Clamp(Mathf.FloorToInt(animationComponent.currentIndex) + clip.startIndex, clip.startIndex, clip.endIndex);
-                animationComponent.spriteRenderer.sprite = spriteSheet[spriteIndex];
+                    animationComponent.currentIndex = Mathf.Clamp(animationComponent.currentIndex, 0, frameCount);
+                    animationComponent.spriteRenderer.sprite = spriteSheet[lastIndexInClip];
+                }
+            }
+
+            // Combat update (except desired movement) [Requires animation update]
+            {
+                Span<UnitEntity> unitsSpan = units.elements.AsSpan();
+                foreach (int unitIndex in units)
+                {
+                    ref UnitEntity unit = ref unitsSpan[unitIndex];
+                    ref AttackComponent attack = ref unit.attack;
+
+                    if (!units.IsValidID(attack.target))
+                        continue;
+
+                    ref UnitEntity target = ref unitsSpan[attack.target.index];
+
+                    if (!attack.isAttacking)
+                        continue;
+
+                    // DESIGN CHOICE, damage once out of damage range?
+                    if (2f < (target.transform.position - unit.transform.position).sqrMagnitude)
+                        continue;
+
+
+                }
             }
         }
 
-        // todo detect keyboard keys, then change left click commands accordingly
-
-        // Requires mouse world position
+        // [Requires mouse world position]
         {
             Vector2? mouseWorldPosition = null;
             Vector2 GetMouseWorldPosition(ref Vector2? mouseWorldPosition)
@@ -524,8 +651,6 @@ public class MainScript : MonoBehaviour
                     }
                 }
             }
-
-            // Left-click
         }
 
         // Control groups
@@ -656,20 +781,23 @@ public class MainScript : MonoBehaviour
         }
     }
 
-    public List<Vector2Int> pathfinding;
-    public Dictionary<Vector2Int, Vector2Int> pathfindingVisitedFrom;
-    public List<Pathfind.ScoreAStar> pathfindingScores;
-    public float forceMax = 5f;
     void FixedUpdate()
     {
+        // Combat desired movement update
+        {
+
+        }
+
         Vector2 elementSize = navigationGrid.GetElementSize();
         Vector2 halfElementSize = elementSize * 0.5f;
-        
-        // movement update
+
+        // Movement update
         {
             Span<UnitEntity> unitsSpan = units.elements.AsSpan();
-            foreach (ref UnitEntity unit in unitsSpan)
+            foreach (int unitIndex in units)
             {
+                ref UnitEntity unit = ref unitsSpan[unitIndex];
+
                 Vector2 unitPosition = (Vector2)unit.transform.position;
                 Vector2? previousUnitBoundsCenter = null;
                 Collider2D unitCollider = unit.transform.GetComponent<Collider2D>();
@@ -706,13 +834,14 @@ public class MainScript : MonoBehaviour
 
                         Vector2 force = (targetVelocity - unit.move.rigidbody.velocity) * unit.move.rigidbody.mass;
                         float forceMag = force.magnitude;
-                        if (forceMax < forceMag)
+                        if (FORCE_MAX < forceMag)
                         {
-                            force *= forceMax / forceMag;
+                            force *= FORCE_MAX / forceMag;
                         }
                         unit.move.rigidbody.AddForce(force, ForceMode2D.Impulse);
 
-                        pathfinding.Insert(0, navigationGrid.GetIndex(elementSize, unitPosition));
+                        // debug vis only
+                        //pathfinding.Insert(0, navigationGrid.GetIndex(elementSize, unitPosition));
                     }
                 }
 

@@ -1,5 +1,5 @@
 fileFormatVersion: 2
-guid: 802ed927dc7c1544b853e3e30eec92fe
+guid: 4b0046ab486e0ff46a8fc7035972d0c4
 TextureImporter:
   internalIDToNameTable: []
   externalObjects: {}
@@ -123,7 +123,133 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: Pawn_Blue_0
+      name: Archer_Purple_0
+      rect:
+        serializedVersion: 2
+        x: 0
+        y: 1152
+        width: 192
+        height: 192
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: a0f4e521a2ede8b428c3df1bf9c2cdf9
+      internalID: 91100957
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Archer_Purple_1
+      rect:
+        serializedVersion: 2
+        x: 192
+        y: 1152
+        width: 192
+        height: 192
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9e937b95da49e714eb9f736412427c53
+      internalID: 1421053391
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Archer_Purple_2
+      rect:
+        serializedVersion: 2
+        x: 384
+        y: 1152
+        width: 192
+        height: 192
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: b59278d362b817140aa217b8ab1904bd
+      internalID: 301260091
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Archer_Purple_3
+      rect:
+        serializedVersion: 2
+        x: 576
+        y: 1152
+        width: 192
+        height: 192
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 91ab324345d3cc44f8e8e63a87d473f1
+      internalID: -1803595950
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Archer_Purple_4
+      rect:
+        serializedVersion: 2
+        x: 768
+        y: 1152
+        width: 192
+        height: 192
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5a44a406b04f9a64681efb1b2b48b1b7
+      internalID: 1559227302
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Archer_Purple_5
+      rect:
+        serializedVersion: 2
+        x: 960
+        y: 1152
+        width: 192
+        height: 192
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2be147004736df1458dbc7f9a8037d66
+      internalID: 1221460365
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Archer_Purple_6
       rect:
         serializedVersion: 2
         x: 0
@@ -137,14 +263,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: b71d4598a3840c241aab20625fc62e8f
-      internalID: 673063573
+      spriteID: e2c8e5b41164d1544b365cebbe56ba04
+      internalID: -1434276216
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Pawn_Blue_1
+      name: Archer_Purple_7
       rect:
         serializedVersion: 2
         x: 192
@@ -158,14 +284,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 84880da4da132e7489624bce3d446895
-      internalID: -4766250
+      spriteID: 7cae9a47677da124fa985c8aa81eb314
+      internalID: 242453092
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Pawn_Blue_2
+      name: Archer_Purple_8
       rect:
         serializedVersion: 2
         x: 384
@@ -179,14 +305,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: b0fdfe4cbd72bd94e9a11cc67498486f
-      internalID: -326322731
+      spriteID: bdd62e388f2b55c4fbe8a6aa2017ba84
+      internalID: -521866186
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Pawn_Blue_3
+      name: Archer_Purple_9
       rect:
         serializedVersion: 2
         x: 576
@@ -200,14 +326,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 1a0774ff946686b4a9c827244cb2b4ff
-      internalID: -978585998
+      spriteID: 25344e50aaf97f649954e1e347a9ac4e
+      internalID: -233150799
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Pawn_Blue_4
+      name: Archer_Purple_10
       rect:
         serializedVersion: 2
         x: 768
@@ -221,14 +347,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 9a2880e82d1dd424a889aa564a0ee921
-      internalID: 1220579321
+      spriteID: 175ae0190d6fd0a409637a9405c2b1b7
+      internalID: 880114069
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Pawn_Blue_5
+      name: Archer_Purple_11
       rect:
         serializedVersion: 2
         x: 960
@@ -242,14 +368,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 9cfea3f1c67baa540aa70a338ab6459f
-      internalID: -2113147959
+      spriteID: 68dcdc876a305a74a9f90921ea50cd82
+      internalID: 71499012
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Pawn_Blue_6
+      name: Archer_Purple_12
       rect:
         serializedVersion: 2
         x: 0
@@ -263,14 +389,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 495c402db1a86784a881faffa13fee33
-      internalID: -1851327521
+      spriteID: af86618e2689fc24baae2cd4c80248eb
+      internalID: 233829107
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Pawn_Blue_7
+      name: Archer_Purple_13
       rect:
         serializedVersion: 2
         x: 192
@@ -284,14 +410,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: cd61ff4c22f081d48814c54d383d0958
-      internalID: -1807428699
+      spriteID: 4142979b2e60b6c41be18aee04d5520e
+      internalID: -2031017389
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Pawn_Blue_8
+      name: Archer_Purple_14
       rect:
         serializedVersion: 2
         x: 384
@@ -305,14 +431,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: d5dffd711e2cf6f40b127d5be63d676e
-      internalID: 1572030662
+      spriteID: e1d7898ab4d4c344d855f0a3ec22046e
+      internalID: -1208082470
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Pawn_Blue_9
+      name: Archer_Purple_15
       rect:
         serializedVersion: 2
         x: 576
@@ -326,14 +452,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 172d7d805f119d948919acefecfd0d76
-      internalID: -191542210
+      spriteID: d4d7c041145566941b55280a64b75827
+      internalID: 1875164067
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Pawn_Blue_10
+      name: Archer_Purple_16
       rect:
         serializedVersion: 2
         x: 768
@@ -347,14 +473,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: f45bf32a873e60b429a175fde1895227
-      internalID: 139939671
+      spriteID: 8e9806cbf05bc8e468369cc9c9eea82a
+      internalID: 686710885
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Pawn_Blue_11
+      name: Archer_Purple_17
       rect:
         serializedVersion: 2
         x: 960
@@ -368,14 +494,56 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: fb880315217120b43b2adb40738f91d6
-      internalID: -288995023
+      spriteID: b30076cc5236f204d917c10b5e26f9a3
+      internalID: 1109943206
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Pawn_Blue_12
+      name: Archer_Purple_18
+      rect:
+        serializedVersion: 2
+        x: 1152
+        y: 768
+        width: 192
+        height: 192
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 66deabc5ad9e14c4faae7b412fc23b1d
+      internalID: -173367235
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Archer_Purple_19
+      rect:
+        serializedVersion: 2
+        x: 1344
+        y: 768
+        width: 192
+        height: 192
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 191c403c0ff9c1841a920fa9482284df
+      internalID: -307827252
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Archer_Purple_20
       rect:
         serializedVersion: 2
         x: 0
@@ -389,14 +557,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 29357ac2f6bb7aa48bfc408ee469b64e
-      internalID: 1844111339
+      spriteID: 57240e1f4c21ffb40ab2d74ae902e47c
+      internalID: -1504236349
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Pawn_Blue_13
+      name: Archer_Purple_21
       rect:
         serializedVersion: 2
         x: 192
@@ -410,14 +578,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 96808e34b7e5a17469fb4a34ef1fc1a4
-      internalID: -315127618
+      spriteID: 34f1c22320d70bf4abe026299e78c4da
+      internalID: 378660790
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Pawn_Blue_14
+      name: Archer_Purple_22
       rect:
         serializedVersion: 2
         x: 384
@@ -431,14 +599,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: fc2b93cdfc3d90f45900f28bb07a5dcb
-      internalID: -1390265154
+      spriteID: da84f0ab9de47774e8b3016d469b9a89
+      internalID: 1207517986
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Pawn_Blue_15
+      name: Archer_Purple_23
       rect:
         serializedVersion: 2
         x: 576
@@ -452,14 +620,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 978700bf8afac1241aba5f1f959ed733
-      internalID: 1168591025
+      spriteID: 59aa403958cdff1438542d367a456244
+      internalID: 939242876
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Pawn_Blue_16
+      name: Archer_Purple_24
       rect:
         serializedVersion: 2
         x: 768
@@ -473,14 +641,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 81b2a092f6477f344985745757dea55f
-      internalID: -1570224250
+      spriteID: 2fd6af99420af7748b17173ad1c951ce
+      internalID: -472491445
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Pawn_Blue_17
+      name: Archer_Purple_25
       rect:
         serializedVersion: 2
         x: 960
@@ -494,14 +662,56 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 68238bd24a53eba40b068d793f20fabb
-      internalID: -292321447
+      spriteID: ec403ae73ca822e41a51448fdb5902dd
+      internalID: -811747987
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Pawn_Blue_18
+      name: Archer_Purple_26
+      rect:
+        serializedVersion: 2
+        x: 1152
+        y: 576
+        width: 192
+        height: 192
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 1c75bcc18070f734d9a67d1edd042e69
+      internalID: 84896561
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Archer_Purple_27
+      rect:
+        serializedVersion: 2
+        x: 1344
+        y: 576
+        width: 192
+        height: 192
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5104c0b7186e1684fa4296715f94ac1f
+      internalID: 477353734
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Archer_Purple_28
       rect:
         serializedVersion: 2
         x: 0
@@ -515,14 +725,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 4e7c39a6e93ce6f4bad9d859c9689973
-      internalID: 1153963017
+      spriteID: 06428713adbc6a04fba9bab95e1483ff
+      internalID: -762795892
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Pawn_Blue_19
+      name: Archer_Purple_29
       rect:
         serializedVersion: 2
         x: 192
@@ -536,14 +746,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: ad8928847ce08104ba79a39f540a7a89
-      internalID: 103643383
+      spriteID: 96c94ba116c0f0744a956cc28f55c0b2
+      internalID: -1248732296
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Pawn_Blue_20
+      name: Archer_Purple_30
       rect:
         serializedVersion: 2
         x: 384
@@ -557,14 +767,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: f643b2db929a9614e813b0ec1b15e369
-      internalID: -745700819
+      spriteID: a635eb3e91b2d874790c941a501cd6b8
+      internalID: -121711347
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Pawn_Blue_21
+      name: Archer_Purple_31
       rect:
         serializedVersion: 2
         x: 576
@@ -578,14 +788,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 11300f6e6fc352a45931ee9de9b524d1
-      internalID: 1650067180
+      spriteID: cbdd472cd2f8e644c9d7fda3bab87098
+      internalID: 971030358
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Pawn_Blue_22
+      name: Archer_Purple_32
       rect:
         serializedVersion: 2
         x: 768
@@ -599,14 +809,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 9da1fd5204c04c547a0d72df1843ed72
-      internalID: 1372819823
+      spriteID: 112e10e4d50250046b01118d7988d65e
+      internalID: -1573898583
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Pawn_Blue_23
+      name: Archer_Purple_33
       rect:
         serializedVersion: 2
         x: 960
@@ -620,14 +830,56 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: e3f079c70add39045adfba814213278e
-      internalID: -309658421
+      spriteID: 6033f067c7280594291eb270fc076f19
+      internalID: 1097999351
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Pawn_Blue_24
+      name: Archer_Purple_34
+      rect:
+        serializedVersion: 2
+        x: 1152
+        y: 384
+        width: 192
+        height: 192
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 2dec7ad4c8452024087f1f47f6f83f2b
+      internalID: 1373389817
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Archer_Purple_35
+      rect:
+        serializedVersion: 2
+        x: 1344
+        y: 384
+        width: 192
+        height: 192
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 227bffe5ba3b301468e681df8c641ea4
+      internalID: 668618071
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Archer_Purple_36
       rect:
         serializedVersion: 2
         x: 0
@@ -641,14 +893,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 4400b86f43a6358468dd598aba28d0a9
-      internalID: 934223013
+      spriteID: f292d377dfaa011488ee76add23c9245
+      internalID: -1312046181
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Pawn_Blue_25
+      name: Archer_Purple_37
       rect:
         serializedVersion: 2
         x: 192
@@ -662,14 +914,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: eb228d1681f28fd44897147d384c392b
-      internalID: -1414168519
+      spriteID: 61fa8a49f80bcd247b2fd6d5d95eb053
+      internalID: -43495681
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Pawn_Blue_26
+      name: Archer_Purple_38
       rect:
         serializedVersion: 2
         x: 384
@@ -683,14 +935,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 645ed8112ecca814d9d4e1e4ed8dc34e
-      internalID: 1344149811
+      spriteID: bd32601965a636b4f921d8bb9b9dc153
+      internalID: 664234907
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Pawn_Blue_27
+      name: Archer_Purple_39
       rect:
         serializedVersion: 2
         x: 576
@@ -704,14 +956,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 37a240482488b6042953e4caa460201b
-      internalID: 1192636397
+      spriteID: 4508f69d1869f2049836d7fef4744261
+      internalID: -1078350553
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Pawn_Blue_28
+      name: Archer_Purple_40
       rect:
         serializedVersion: 2
         x: 768
@@ -725,14 +977,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: f8391e800caa3514ca05d42386627b28
-      internalID: 2006787431
+      spriteID: c9df629905d1c8b4e92f4d4122ac222b
+      internalID: -404804152
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Pawn_Blue_29
+      name: Archer_Purple_41
       rect:
         serializedVersion: 2
         x: 960
@@ -746,14 +998,56 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 5da97c734c490454ba95c4ca12036451
-      internalID: 1421446739
+      spriteID: 196ab7c3adc9e9a448358164dfc3c1f8
+      internalID: -1912933714
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Pawn_Blue_30
+      name: Archer_Purple_42
+      rect:
+        serializedVersion: 2
+        x: 1152
+        y: 192
+        width: 192
+        height: 192
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 583aed3e5f9c79e4ebcb73ae2d94ed6a
+      internalID: -1442338816
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Archer_Purple_43
+      rect:
+        serializedVersion: 2
+        x: 1344
+        y: 192
+        width: 192
+        height: 192
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 5f21d780f94dc2d4db502c31640f049c
+      internalID: -2094068503
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Archer_Purple_44
       rect:
         serializedVersion: 2
         x: 0
@@ -767,14 +1061,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 37f572b9a13676d409936293d54c96fe
-      internalID: 1792715384
+      spriteID: 08437522db8a03941a615652a46deb85
+      internalID: -1984071022
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Pawn_Blue_31
+      name: Archer_Purple_45
       rect:
         serializedVersion: 2
         x: 192
@@ -788,14 +1082,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 3444db7111b74fd429c54a47134d2359
-      internalID: 1624338125
+      spriteID: 064a23c2cf9c56e47bfe9f401c8d8c3f
+      internalID: -724122018
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Pawn_Blue_32
+      name: Archer_Purple_46
       rect:
         serializedVersion: 2
         x: 384
@@ -809,14 +1103,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 33f79d3d2c80b0d44b6e68dbc5d8bdc4
-      internalID: 433899645
+      spriteID: 35dc493df6a56364fbf80df3b6fc0f9f
+      internalID: -208691344
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Pawn_Blue_33
+      name: Archer_Purple_47
       rect:
         serializedVersion: 2
         x: 576
@@ -830,14 +1124,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: ff0212c9dd44eed498be074ccbdbcb99
-      internalID: 653758447
+      spriteID: e7552f74c9a630544907c08a696e413d
+      internalID: 120199544
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Pawn_Blue_34
+      name: Archer_Purple_48
       rect:
         serializedVersion: 2
         x: 768
@@ -851,14 +1145,14 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 6ff54616f07545745b85e847333b4117
-      internalID: 240865243
+      spriteID: fc957cf72dc625144acb332c43250c1e
+      internalID: -1859886383
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: Pawn_Blue_35
+      name: Archer_Purple_49
       rect:
         serializedVersion: 2
         x: 960
@@ -872,8 +1166,50 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: 0
       bones: []
-      spriteID: 1d45554bc10ee624688238b55777f12a
-      internalID: 1987643770
+      spriteID: 07f2b299dd0d6a0408c88e79b9890a3a
+      internalID: 1045097966
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Archer_Purple_50
+      rect:
+        serializedVersion: 2
+        x: 1152
+        y: 0
+        width: 192
+        height: 192
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 9dcd0bc93cc67f64a9020e0a20192d8c
+      internalID: 838539782
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Archer_Purple_51
+      rect:
+        serializedVersion: 2
+        x: 1344
+        y: 0
+        width: 192
+        height: 192
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: e6ad1a9dad115084ca429a726e99b26c
+      internalID: 716301910
       vertices: []
       indices: 
       edges: []
@@ -889,42 +1225,58 @@ TextureImporter:
     weights: []
     secondaryTextures: []
     nameFileIdTable:
-      Pawn_Blue_0: 673063573
-      Pawn_Blue_1: -4766250
-      Pawn_Blue_10: 139939671
-      Pawn_Blue_11: -288995023
-      Pawn_Blue_12: 1844111339
-      Pawn_Blue_13: -315127618
-      Pawn_Blue_14: -1390265154
-      Pawn_Blue_15: 1168591025
-      Pawn_Blue_16: -1570224250
-      Pawn_Blue_17: -292321447
-      Pawn_Blue_18: 1153963017
-      Pawn_Blue_19: 103643383
-      Pawn_Blue_2: -326322731
-      Pawn_Blue_20: -745700819
-      Pawn_Blue_21: 1650067180
-      Pawn_Blue_22: 1372819823
-      Pawn_Blue_23: -309658421
-      Pawn_Blue_24: 934223013
-      Pawn_Blue_25: -1414168519
-      Pawn_Blue_26: 1344149811
-      Pawn_Blue_27: 1192636397
-      Pawn_Blue_28: 2006787431
-      Pawn_Blue_29: 1421446739
-      Pawn_Blue_3: -978585998
-      Pawn_Blue_30: 1792715384
-      Pawn_Blue_31: 1624338125
-      Pawn_Blue_32: 433899645
-      Pawn_Blue_33: 653758447
-      Pawn_Blue_34: 240865243
-      Pawn_Blue_35: 1987643770
-      Pawn_Blue_4: 1220579321
-      Pawn_Blue_5: -2113147959
-      Pawn_Blue_6: -1851327521
-      Pawn_Blue_7: -1807428699
-      Pawn_Blue_8: 1572030662
-      Pawn_Blue_9: -191542210
+      Archer_Purple_0: 91100957
+      Archer_Purple_1: 1421053391
+      Archer_Purple_10: 880114069
+      Archer_Purple_11: 71499012
+      Archer_Purple_12: 233829107
+      Archer_Purple_13: -2031017389
+      Archer_Purple_14: -1208082470
+      Archer_Purple_15: 1875164067
+      Archer_Purple_16: 686710885
+      Archer_Purple_17: 1109943206
+      Archer_Purple_18: -173367235
+      Archer_Purple_19: -307827252
+      Archer_Purple_2: 301260091
+      Archer_Purple_20: -1504236349
+      Archer_Purple_21: 378660790
+      Archer_Purple_22: 1207517986
+      Archer_Purple_23: 939242876
+      Archer_Purple_24: -472491445
+      Archer_Purple_25: -811747987
+      Archer_Purple_26: 84896561
+      Archer_Purple_27: 477353734
+      Archer_Purple_28: -762795892
+      Archer_Purple_29: -1248732296
+      Archer_Purple_3: -1803595950
+      Archer_Purple_30: -121711347
+      Archer_Purple_31: 971030358
+      Archer_Purple_32: -1573898583
+      Archer_Purple_33: 1097999351
+      Archer_Purple_34: 1373389817
+      Archer_Purple_35: 668618071
+      Archer_Purple_36: -1312046181
+      Archer_Purple_37: -43495681
+      Archer_Purple_38: 664234907
+      Archer_Purple_39: -1078350553
+      Archer_Purple_4: 1559227302
+      Archer_Purple_40: -404804152
+      Archer_Purple_41: -1912933714
+      Archer_Purple_42: -1442338816
+      Archer_Purple_43: -2094068503
+      Archer_Purple_44: -1984071022
+      Archer_Purple_45: -724122018
+      Archer_Purple_46: -208691344
+      Archer_Purple_47: 120199544
+      Archer_Purple_48: -1859886383
+      Archer_Purple_49: 1045097966
+      Archer_Purple_5: 1221460365
+      Archer_Purple_50: 838539782
+      Archer_Purple_51: 716301910
+      Archer_Purple_6: -1434276216
+      Archer_Purple_7: 242453092
+      Archer_Purple_8: -521866186
+      Archer_Purple_9: -233150799
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
