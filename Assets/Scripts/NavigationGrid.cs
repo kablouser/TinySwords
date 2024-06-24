@@ -172,6 +172,49 @@ public struct NavigationGrid
             0f);
     }
 
+    // Snaps world position to nearest indexed point on grid clamped to grid bounds
+    public Vector3 RoundClampWorldPosition(in Vector2 boundsSize, in Vector2 elementSize, in Vector2 halfElementSize, in Vector2 position)
+    {
+        Vector2Int index = GetIndex(elementSize, position);
+        index.x = Mathf.Clamp(index.x, 0, nodes.dimension0);
+        index.y = Mathf.Clamp(index.y, 0, nodes.dimension1);
+        return GetElementWorldPosition(boundsSize, halfElementSize, index);
+    }
+
+    // Snaps world position to nearest indexed point on grid, if outside grid false
+    public bool TryRoundWorldPosition(
+        in Vector2 boundsSize, in Vector2 elementSize, in Vector2 halfElementSize, in Vector2 position,
+        out Vector3 roundedPosition)
+    {
+        Vector2Int index = GetIndex(elementSize, position);
+        if (nodes.InRange(index))
+        {
+            roundedPosition = GetElementWorldPosition(boundsSize, halfElementSize, index);
+            return true;
+        }
+        else
+        {
+            roundedPosition = default;
+            return false;
+        }
+    }
+
+    public Vector2Int RoundClampWorldPositionToIndex(in Vector2 elementSize, in Vector2 position)
+    {
+        Vector2Int index = GetIndex(elementSize, position);
+        index.x = Mathf.Clamp(index.x, 0, nodes.dimension0);
+        index.y = Mathf.Clamp(index.y, 0, nodes.dimension1);
+        return index;
+    }
+
+    public bool TryRoundWorldPositionToIndex(
+        in Vector2 elementSize, in Vector2 position,
+        out Vector2Int index)
+    {
+        index = GetIndex(elementSize, position);
+        return nodes.InRange(index);
+    }
+
     // includes diagonals
     public static void GetNeighbours(in Vector2Int index, Span<Vector2Int> neighbours)
     {

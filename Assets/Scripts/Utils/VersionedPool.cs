@@ -34,16 +34,6 @@ public struct ID
             a.index != b.index ||
             a.version != b.version;
     }
-
-    public override bool Equals(object _)
-    {
-        return false;
-    }
-
-    public override int GetHashCode()
-    {
-        return 0;
-    }
 }
 
 [Serializable]
@@ -61,7 +51,6 @@ public struct VersionedPool<T> where T : struct
         if (0 <= findUnusedIndex)
         {
             elements[findUnusedIndex] = t;
-            versions[findUnusedIndex]++;
             isUsing[findUnusedIndex] = true;
             return new ID
             {
@@ -84,16 +73,19 @@ public struct VersionedPool<T> where T : struct
         }
     }
 
-    public bool TryDespawn(in ID id)
+    public bool TryDespawn(in ID id, out T despawnedElement)
     {
         if (IsValidID(id))
         {
-            isUsing[id.index] = false;
+            despawnedElement = elements[id.index];
 #if UNITY_EDITOR // validation
             elements[id.index] = default;
 #endif
+            versions[id.index]++;
+            isUsing[id.index] = false;
             return true;
         }
+        despawnedElement = default;
         return false;
     }
 

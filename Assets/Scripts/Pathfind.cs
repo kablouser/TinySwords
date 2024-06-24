@@ -1,12 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System;
-using System.IO;
-using Unity.VisualScripting;
-using static UnityEngine.RuleTile.TilingRuleOutput;
-using static Pathfind;
-using System.Reflection;
-using UnityEngine.SocialPlatforms.Impl;
 
 public static class Pathfind
 {

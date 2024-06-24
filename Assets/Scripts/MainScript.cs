@@ -32,6 +32,8 @@ public enum AnimationClipIndex
 
 public enum UnitType
 {
+    Invalid,
+
     Barrel,
     TNT,
     Torch,
@@ -42,11 +44,13 @@ public enum UnitType
 };
 public enum LeftClickCommand { None, Move, Attack };
 
+public enum CardinalDirection { North, NorthEast, East, SouthEast, South, SouthWest, West, NorthWest };
+
 [Serializable]
 public struct SpriteSheet
 {
 #if UNITY_EDITOR
-    [TextArea(0,3)]
+    [TextArea(0, 3)]
     public string name;
 #endif
 
@@ -57,7 +61,7 @@ public struct SpriteSheet
 public struct AnimationClip
 {
 #if UNITY_EDITOR
-    [TextArea(0,3)]
+    [TextArea(0, 3)]
     public string name;
 #endif
 
@@ -84,6 +88,8 @@ public struct AnimationComponent
 public struct MoveComponent
 {
     public Rigidbody2D rigidbody;
+    public bool isFreeze; // if true, move to round clamp position instead
+    public bool isTargetValid;
     public Vector2 target;
     public float speed;
 }
@@ -92,10 +98,8 @@ public struct MoveComponent
 public struct AttackComponent
 {
     public bool isAttackMoving;
-    public bool isAttacking;
-    public float attackEndTime;
     public ID target;
-    public int nextDamage;
+    public int combo; // chooses animation clip
 }
 
 [Serializable]
@@ -115,6 +119,7 @@ public struct UnitEntity
     public AnimationComponent animation;
     public MoveComponent move;
     public Bounds2D currentBounds;
+    // this unit's effect on the navigation grid within it's currentBounds
     public NavigationNode navigationChangeInBounds;
     public AttackComponent attack;
     public DefendComponent defend;
@@ -127,12 +132,9 @@ public struct AnimationEvent
     public AnimationClipIndex clip;
 }
 
-[Serializable]
-public class HashSetID : SerializableCollections.HashSet<ID> { }
-
 public class MainScript : MonoBehaviour
 {
-    public const float ANIMATION_FRAMERATE = 1f;// 10f;
+    public const float ANIMATION_FRAMERATE = 10f;
     public const int EXPECTED_SELECT_COUNT = 8;
     public const float FORCE_MAX = 5f;
 
@@ -153,13 +155,12 @@ public class MainScript : MonoBehaviour
     [Header("Animation")]
     // time before next animation frame update
     public float animationAccumulateFrames;
-    // special events specified in non-looping clips
-    public List<AnimationEvent> animationSpecialEvents;
-    // end of animation reached in non-looping clips
-    public List<AnimationEvent> animationEndEvents;
+
+    [Header("Combat Caching")]
+    // dupes should be okay
+    public List<ID> despawnUnitsQueue;
 
     [Header("Selection")]
-    public HashSetID currentSelectIDs;
     public List<GameObject> selectIcons;
     public LayerMask selectionMask;
     public float doubleSelectTimeThreshold = 0.4f;
@@ -167,13 +168,14 @@ public class MainScript : MonoBehaviour
     // valid id if last select has only 1 result, used for detecting double select
     public ID lastSelectIfSingle;
 
-    public HashSetID[] controlGroups;
+    public HashSet<ID> currentSelectIDs;
+    public HashSet<ID>[] controlGroups;
 
     [Header("Box Select")]
     public Vector2 boxSelectPositionStart;
     public bool isBoxSelect;
     public List<Collider2D> collider2DCache;
-    public HashSetID boxSelectIDs;
+    public HashSet<ID> boxSelectIDs;
 
     [Header("Left Click Command")]
     public LeftClickCommand leftClickCommand;
@@ -253,10 +255,10 @@ public class MainScript : MonoBehaviour
             (inS, inName) => { inS.name = inName; return inS; });
 
         // clear all events
-/*        foreach (ref var x in animationClips.AsSpan())
-        {
-            x.eventIndex = -1;
-        }*/
+        /*        foreach (ref var x in animationClips.AsSpan())
+                {
+                    x.eventIndex = -1;
+                }*/
     }
 
     [ContextMenu("_Prepopulate Pools")]
@@ -269,15 +271,18 @@ public class MainScript : MonoBehaviour
 
     void Start()
     {
+        currentSelectIDs = new HashSet<ID>();
+        boxSelectIDs = new HashSet<ID>();
+
         //TODO THINK
         pathfinding = new List<Vector2Int>();
         pathfindingVisitedFrom = new Dictionary<Vector2Int, Vector2Int>();
         pathfindingScores = new List<Pathfind.ScoreAStar>();
 
-        controlGroups = new HashSetID[22];
-        for(int i = 0; i < controlGroups.Length; ++i)
+        controlGroups = new HashSet<ID>[22];
+        for (int i = 0; i < controlGroups.Length; ++i)
         {
-            controlGroups[i] = new HashSetID();
+            controlGroups[i] = new HashSet<ID>();
         }
 
         collider2DCache = new List<Collider2D>(EXPECTED_SELECT_COUNT);
@@ -292,7 +297,9 @@ public class MainScript : MonoBehaviour
         navigationGrid.Snapshot(navigationLayerMask);
 
 #if UNITY_EDITOR
-        Application.targetFrameRate = 60;
+        //Application.targetFrameRate = 60;
+        // stress test at lowest FPS possible
+        //Application.targetFrameRate = Mathf.FloorToInt(1f / Time.maximumDeltaTime);
 
         if (!units.Validate())
         {
@@ -306,21 +313,12 @@ public class MainScript : MonoBehaviour
                 Collider2D collider = unitGameObject.GetComponent<Collider2D>();
                 SpriteRenderer spriteRenderer = unitGameObject.GetComponent<SpriteRenderer>();
                 Rigidbody2D rigidbody2D = unitGameObject.GetComponent<Rigidbody2D>();
-                SpriteSheetIndex chooseSpritesheet = SpriteSheetIndex.ArcherBlue;
-                AnimationClipIndex chooseAnimationClip = AnimationClipIndex.ArcherShootDownRight;
-
-/*                if (spriteRenderer.sprite == spriteSheets[0].spriteSheet[0])
-                {
-                    chooseSpritesheet = SpriteSheetIndex.WarriorBlue;
-                }
-                else
-                {
-                    chooseSpritesheet = SpriteSheetIndex.ArcherBlue;
-                }*/
+                SpriteSheetIndex chooseSpritesheet = SpriteSheetIndex.WarriorBlue;
+                AnimationClipIndex chooseAnimationClip = AnimationClipIndex.WarriorStand;
 
                 return new UnitEntity
                 {
-                    type = UnitType.Archer,
+                    type = UnitType.Warrior,
                     team = 0,
                     transform = unitGameObject.transform,
                     animation = new AnimationComponent
@@ -333,14 +331,14 @@ public class MainScript : MonoBehaviour
                     move = new MoveComponent
                     {
                         rigidbody = rigidbody2D,
-                        target = unitGameObject.transform.position,
+                        isFreeze = false,
+                        isTargetValid = false,
                         speed = 10f,
                     },
                     currentBounds = new Bounds2D(collider.bounds),
                     navigationChangeInBounds = NavigationNode.Blocking(),
                     attack = new AttackComponent
                     {
-                        attackEndTime = 0f,
                         isAttackMoving = false,
                     },
                     defend = new DefendComponent
@@ -361,11 +359,12 @@ public class MainScript : MonoBehaviour
         animationAccumulateFrames += Time.deltaTime * ANIMATION_FRAMERATE;
         if (1f < animationAccumulateFrames)
         {
+            Span<UnitEntity> unitsSpan = units.elements.AsSpan();
+
             {
                 int animateFrames = Mathf.FloorToInt(animationAccumulateFrames);
                 animationAccumulateFrames -= animateFrames;
 
-                Span<UnitEntity> unitsSpan = units.elements.AsSpan();
                 Span<AnimationClip> animationClipsSpan = animationClips.AsSpan();
                 foreach (int unitIndex in units)
                 {
@@ -381,7 +380,7 @@ public class MainScript : MonoBehaviour
 
                     int frameCount = clip.GetFrameCount;
                     int lastIndex = animationComponent.currentIndex;
-                    int lastIndexInClip = lastIndex + clip.startIndex;
+                    int lastIndexInClip = clip.startIndex + lastIndex;
                     animationComponent.currentIndex += animateFrames;
                     if (clip.isRepeat)
                     {
@@ -394,56 +393,67 @@ public class MainScript : MonoBehaviour
                         }
 #endif
                     }
-                    else
-                    {
-                        int currentIndexInClip = animationComponent.currentIndex + clip.startIndex;
-                        if (lastIndexInClip < clip.eventIndex && clip.eventIndex <= currentIndexInClip)
-                        {
-                            animationSpecialEvents.Add(new AnimationEvent
-                            {
-                                id = units.GetCurrentID(unitIndex),
-                                clip = animationComponent.animationClipIndex
-                            });
-                        }
-                        if (lastIndexInClip < clip.endIndex && clip.endIndex <= currentIndexInClip)
-                        {
-                            animationEndEvents.Add(new AnimationEvent
-                            {
-                                id = units.GetCurrentID(unitIndex),
-                                clip = animationComponent.animationClipIndex
-                            });
-                        }
-                    }
 
                     animationComponent.currentIndex = Mathf.Clamp(animationComponent.currentIndex, 0, frameCount);
-                    animationComponent.spriteRenderer.sprite = spriteSheet[lastIndexInClip];
-                }
-            }
+                    int currentIndexInClip = clip.startIndex + animationComponent.currentIndex;
+                    animationComponent.spriteRenderer.sprite = spriteSheet[currentIndexInClip];
 
-            // Combat update (except desired movement) [Requires animation update]
-            {
-                Span<UnitEntity> unitsSpan = units.elements.AsSpan();
-                foreach (int unitIndex in units)
-                {
-                    ref UnitEntity unit = ref unitsSpan[unitIndex];
-                    ref AttackComponent attack = ref unit.attack;
+                    if (!clip.isRepeat)
+                    {
+                        // Animation special events (on hit / spawn projectiles)
+                        if (lastIndexInClip < clip.eventIndex && clip.eventIndex <= currentIndexInClip)
+                        {
+                            if (!units.IsValidID(unit.attack.target))
+                                continue;
 
-                    if (!units.IsValidID(attack.target))
-                        continue;
+                            ref UnitEntity target = ref unitsSpan[unit.attack.target.index];
+                            switch (GetUnitType(animationComponent.animationClipIndex))
+                            {
+                                case UnitType.Warrior:
+                                    ref DefendComponent defend = ref target.defend;
+                                    //defend.health--;
+                                    //Debug.Log(defend.health);
+                                    if (defend.health <= 0)
+                                    {
+                                        //death
+                                        despawnUnitsQueue.Add(unit.attack.target);
+                                    }
+                                    break;
 
-                    ref UnitEntity target = ref unitsSpan[attack.target.index];
+                                default:
+                                    break;
+                            }
+                        }
 
-                    if (!attack.isAttacking)
-                        continue;
+                        // Animation end transitions (from non-looping animation back to stand)
+                        // make sure not to use animationClipIndex anymore to animate during this frame
+                        if (lastIndexInClip < clip.endIndex && clip.endIndex <= currentIndexInClip)
+                        {
+                            switch (GetUnitType(animationComponent.animationClipIndex))
+                            {
+                                case UnitType.Warrior:
+                                    animationComponent.animationClipIndex = AnimationClipIndex.WarriorStand;
+                                    animationComponent.currentIndex = 0;
+                                    break;
 
-                    // DESIGN CHOICE, damage once out of damage range?
-                    if (2f < (target.transform.position - unit.transform.position).sqrMagnitude)
-                        continue;
-
-
+                                default:
+                                    break;
+                            }
+                        }
+                    }
                 }
             }
         }
+
+        // Despawn command queue (after animation special events which might do damage)
+        foreach (ID despawnID in despawnUnitsQueue)
+        {
+            if (units.TryDespawn(despawnID, out UnitEntity despawnedUnit))
+            {
+                Destroy(despawnedUnit.transform.gameObject);
+            }
+        }
+        despawnUnitsQueue.Clear();
 
         // [Requires mouse world position]
         {
@@ -637,16 +647,61 @@ public class MainScript : MonoBehaviour
                 }
             }
 
-            // Right-click update
+            // Right click update
             {
                 if (Input.GetMouseButtonDown(1))
                 {
+                    // attack target unit
+                    int queryCount = Physics2D.OverlapPoint(
+                        GetMouseWorldPosition(ref mouseWorldPosition),
+                        new ContactFilter2D()
+                        {
+                            layerMask = selectionMask
+                        },
+                        collider2DCache);
+                    ID targetID = new ID();
+                    for (int i = 0; i < queryCount; i++)
+                    {
+                        IDComponent idComp = collider2DCache[i].GetComponentInParent<IDComponent>();
+                        if (idComp &&
+                            units.IsValidID(idComp.id))
+                        {
+                            targetID = idComp.id;
+                            break;
+                        }
+                    }
+                    collider2DCache.Clear();
+
+                    Span<UnitEntity> unitsSpan = units.elements.AsSpan();
                     foreach (ID id in currentSelectIDs)
                     {
                         if (units.IsValidID(id))
                         {
-                            ref UnitEntity unit = ref units.elements.AsSpan()[id.index];
-                            unit.move.target = GetMouseWorldPosition(ref mouseWorldPosition);
+                            ref UnitEntity unit = ref unitsSpan[id.index];
+
+                            if (unit.attack.target != targetID &&
+                                id != targetID) // no self harm!
+                            {
+                                unit.attack.target = targetID;
+
+                                // attack cancel?
+                                switch (GetUnitType(unit.animation.animationClipIndex))
+                                {
+                                    case UnitType.Warrior:
+                                        unit.animation.animationClipIndex = AnimationClipIndex.WarriorWalk;
+                                        break;
+
+                                    default:
+                                        break;
+                                }
+                            }
+
+                            if (targetID.type == IDType.Invalid)
+                            {
+                                // direct move
+                                unit.move.isTargetValid = true;
+                                unit.move.target = GetMouseWorldPosition(ref mouseWorldPosition);
+                            }
                         }
                     }
                 }
@@ -692,7 +747,7 @@ public class MainScript : MonoBehaviour
 
             if (downControlGroup.HasValue)
             {
-                HashSetID controlGroup = controlGroups[downControlGroup.Value];
+                HashSet<ID> controlGroup = controlGroups[downControlGroup.Value];
 
                 if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))
                 {
@@ -771,8 +826,10 @@ public class MainScript : MonoBehaviour
             float mouseScrollY = Input.mouseScrollDelta.y;
             if (Mathf.Epsilon * 8f < Mathf.Abs(mouseScrollY))
             {
+                // low ppu is zoomed in, high ppu is zoomed out
+                // zoomed in has slower change than zoomed out
                 cameraAssetsPPU = Mathf.Clamp(
-                    cameraAssetsPPU + mouseScrollY * cameraZoomSpeed * Time.deltaTime,
+                    cameraAssetsPPU + mouseScrollY * cameraZoomSpeed * Time.deltaTime * (1f + 10f * (cameraAssetsPPU - cameraAssetsPPURange.x) / (cameraAssetsPPURange.y - cameraAssetsPPURange.x)),
                     cameraAssetsPPURange.x,
                     cameraAssetsPPURange.y);
 
@@ -783,76 +840,267 @@ public class MainScript : MonoBehaviour
 
     void FixedUpdate()
     {
-        // Combat desired movement update
-        {
-
-        }
-
+        Span<UnitEntity> unitsSpan = units.elements.AsSpan();
         Vector2 elementSize = navigationGrid.GetElementSize();
         Vector2 halfElementSize = elementSize * 0.5f;
 
-        // Movement update
+        // Combat desired movement update
+        foreach (int unitIndex in units)
         {
-            Span<UnitEntity> unitsSpan = units.elements.AsSpan();
-            foreach (int unitIndex in units)
+            ref UnitEntity unit = ref unitsSpan[unitIndex];
+
+            switch (unit.animation.animationClipIndex)
             {
-                ref UnitEntity unit = ref unitsSpan[unitIndex];
-
-                Vector2 unitPosition = (Vector2)unit.transform.position;
-                Vector2? previousUnitBoundsCenter = null;
-                Collider2D unitCollider = unit.transform.GetComponent<Collider2D>();
-
-                if (unit.currentBounds.min.x != float.NaN)
-                {
-                    navigationGrid.AddBounds(unit.currentBounds, -unit.navigationChangeInBounds, elementSize);
-                    previousUnitBoundsCenter = unit.currentBounds.center;
-                }
-
-                Vector2 targetVelocity = new Vector2();
-
-                if (Pathfind.FindAStar(
-                        navigationGrid, unit.move.rigidbody.mass * unit.move.speed, unitPosition, unit.move.target,
-                        pathfinding,
-                        pathfindingVisitedFrom, pathfindingScores) &&
-
-                    0 < pathfinding.Count)
-                {
-                    if (navigationGrid.nodes.TryIndex(pathfinding[0], out NavigationNode node) &&
-                        0 == node.blocking)
+                case AnimationClipIndex.WarriorStand:
+                case AnimationClipIndex.WarriorWalk:
+                    if (unit.attack.isAttackMoving)
                     {
-                        Vector2 nextPathPosition = (Vector2)navigationGrid.GetElementWorldPosition(navigationGrid.bounds.size, halfElementSize, pathfinding[0]);
-
-                        Vector2 toNextPathPosition = nextPathPosition - unitPosition;
-                        float toNextPathPositionMagnitude = toNextPathPosition.magnitude;
-
-                        targetVelocity = toNextPathPosition * unit.move.speed;
-                        // normalised only above 1 magnitude
-                        if (1f < toNextPathPositionMagnitude)
-                        {
-                            targetVelocity /= toNextPathPositionMagnitude;
-                        }
-
-                        Vector2 force = (targetVelocity - unit.move.rigidbody.velocity) * unit.move.rigidbody.mass;
-                        float forceMag = force.magnitude;
-                        if (FORCE_MAX < forceMag)
-                        {
-                            force *= FORCE_MAX / forceMag;
-                        }
-                        unit.move.rigidbody.AddForce(force, ForceMode2D.Impulse);
-
-                        // debug vis only
-                        //pathfinding.Insert(0, navigationGrid.GetIndex(elementSize, unitPosition));
+                        break;
                     }
+                    // start attack?
+                    if (units.IsValidID(unit.attack.target))
+                    {
+                        Vector3 targetPosition = unitsSpan[unit.attack.target.index].transform.position;
+                        Vector3 unitPosition = unit.transform.position;
+                        Vector3 diff = targetPosition - unitPosition;
+
+                        // manhattan distance < 1.1f
+                        if (Mathf.Abs(diff.x) < 1.1f && Mathf.Abs(diff.y) < 1.1f)
+                        {
+                            // stop moving
+                            unit.move.isFreeze = true;
+                            // start animation
+                            unit.animation.animationClipIndex = GetWarriorAttackClip(diff, unit.attack.combo, out bool? doFlipX);
+                            unit.attack.combo++;
+                            unit.animation.currentIndex = 0;
+
+                            if (doFlipX.HasValue)
+                            {
+                                unit.animation.spriteRenderer.flipX = doFlipX.Value;
+                            }
+                        }
+                        else
+                        {
+                            unit.move.isFreeze = false;
+                            unit.move.isTargetValid = true;
+                            unit.move.target = targetPosition;
+                        }
+                    }
+                    else
+                    {
+                        unit.move.isFreeze = false;
+                    }
+                    break;
+
+                default:
+                    unit.move.isFreeze = true;
+                    break;
+            }
+        }
+
+        // Movement update
+        foreach (int unitIndex in units)
+        {
+            ref UnitEntity unit = ref unitsSpan[unitIndex];
+
+            Vector2 unitPosition = (Vector2)unit.transform.position;
+            Collider2D unitCollider = unit.transform.GetComponent<Collider2D>();
+
+            if (unit.currentBounds.min.x != float.NaN)
+            {
+                navigationGrid.AddBounds(unit.currentBounds, -unit.navigationChangeInBounds, elementSize);
+            }
+
+            pathfinding.Clear();
+            if (unit.move.isFreeze || !unit.move.isTargetValid)
+            {
+                pathfinding.Add(navigationGrid.RoundClampWorldPositionToIndex(elementSize, unitPosition));
+            }
+            else
+            {
+                Pathfind.FindAStar(
+                    navigationGrid, unit.move.rigidbody.mass * unit.move.speed, unitPosition, unit.move.target,
+                    pathfinding,
+                    pathfindingVisitedFrom, pathfindingScores);
+            }
+
+            if (0 < pathfinding.Count &&
+                navigationGrid.nodes.TryIndex(pathfinding[0], out NavigationNode node) &&
+                0 == node.blocking)
+            {
+                Vector2 nextPathPosition = (Vector2)navigationGrid.GetElementWorldPosition(navigationGrid.bounds.size, halfElementSize, pathfinding[0]);
+
+                Vector2 toNextPathPosition = nextPathPosition - unitPosition;
+                float toNextPathPositionMagnitude = toNextPathPosition.magnitude;
+
+                Vector2 targetVelocity = toNextPathPosition * unit.move.speed;
+                // normalised only above 1 magnitude
+                if (1f < toNextPathPositionMagnitude)
+                {
+                    targetVelocity /= toNextPathPositionMagnitude;
                 }
 
-                unit.currentBounds = new Bounds2D(unitCollider.bounds);
-                unit.navigationChangeInBounds = NavigationNode.FromCollider(unitCollider,
-                    previousUnitBoundsCenter.HasValue ?
-                        (unit.currentBounds.center - previousUnitBoundsCenter.Value) :
-                        targetVelocity * Time.fixedDeltaTime);
-                navigationGrid.AddBounds(unit.currentBounds, unit.navigationChangeInBounds, elementSize);
+                Vector2 force = (targetVelocity - unit.move.rigidbody.velocity) * unit.move.rigidbody.mass;
+                float forceMag = force.magnitude;
+                if (FORCE_MAX < forceMag)
+                {
+                    force *= FORCE_MAX / forceMag;
+                }
+                unit.move.rigidbody.AddForce(force, ForceMode2D.Impulse);
+
+                // debug vis only
+                //pathfinding.Insert(0, navigationGrid.GetIndex(elementSize, unitPosition));
+            }
+
+            bool isPreviousMoving = unit.navigationChangeInBounds.blocking <= 0;
+            bool isCurrentMoving;
+
+            unit.currentBounds = new Bounds2D(unitCollider.bounds);
+            unit.navigationChangeInBounds = NavigationNode.FromCollider(unitCollider,
+                unit.move.rigidbody.velocity * Time.fixedDeltaTime);
+
+            isCurrentMoving = unit.navigationChangeInBounds.blocking <= 0;
+
+            navigationGrid.AddBounds(unit.currentBounds, unit.navigationChangeInBounds, elementSize);
+
+            // change walk animation
+            if (isPreviousMoving != isCurrentMoving)
+            {
+                switch (GetUnitType(unit.animation.animationClipIndex))
+                {
+                    case UnitType.Warrior:
+                        unit.animation.animationClipIndex = isCurrentMoving ? AnimationClipIndex.WarriorWalk : AnimationClipIndex.WarriorStand;
+                        break;
+
+                    default:
+                        break;
+                }
+            }
+
+            // flip x sprite?
+            if (0 < Mathf.Abs(unit.navigationChangeInBounds.scaledMomentum.x))
+            {
+                unit.animation.spriteRenderer.flipX = unit.navigationChangeInBounds.scaledMomentum.x <= -1;
             }
         }
     }
-}
 
+    public static UnitType GetUnitType(AnimationClipIndex clip)
+    {
+        switch (clip)
+        {
+            case AnimationClipIndex.BarrelSit:
+            case AnimationClipIndex.BarrelUp:
+            case AnimationClipIndex.BarrelDown:
+            case AnimationClipIndex.BarrelWalk:
+            case AnimationClipIndex.BarrelExplode:
+                return UnitType.Barrel;
+
+            case AnimationClipIndex.TNTStand:
+            case AnimationClipIndex.TNTWalk:
+            case AnimationClipIndex.TNTThrow:
+                return UnitType.TNT;
+
+            case AnimationClipIndex.TorchStand:
+            case AnimationClipIndex.TorchWalk:
+            case AnimationClipIndex.TorchHitRight:
+            case AnimationClipIndex.TorchHitDown:
+            case AnimationClipIndex.TorchHitUp:
+                return UnitType.Torch;
+
+            case AnimationClipIndex.ArcherStand:
+            case AnimationClipIndex.ArcherWalk:
+            case AnimationClipIndex.ArcherShootUp:
+            case AnimationClipIndex.ArcherShootUpRight:
+            case AnimationClipIndex.ArcherShootRight:
+            case AnimationClipIndex.ArcherShootDownRight:
+            case AnimationClipIndex.ArcherShootDown:
+                return UnitType.Archer;
+
+            case AnimationClipIndex.PawnStand:
+            case AnimationClipIndex.PawnWalk:
+            case AnimationClipIndex.PawnHammer:
+            case AnimationClipIndex.PawnAxe:
+            case AnimationClipIndex.PawnCarryStand:
+            case AnimationClipIndex.PawnCarryWalk:
+                return UnitType.Pawn;
+
+            case AnimationClipIndex.WarriorStand:
+            case AnimationClipIndex.WarriorWalk:
+            case AnimationClipIndex.WarriorSwordRight0:
+            case AnimationClipIndex.WarriorSwordRight1:
+            case AnimationClipIndex.WarriorSwordDown0:
+            case AnimationClipIndex.WarriorSwordDown1:
+            case AnimationClipIndex.WarriorSwordUp0:
+            case AnimationClipIndex.WarriorSwordUp1:
+                return UnitType.Warrior;
+
+            default:
+                return UnitType.Invalid;
+        }
+    }
+
+    //public enum CardinalDirection { North, NorthEast, East, SouthEast, South, SouthWest, West, NorthWest };
+    // doFlipX == null means do nothing, else do flipX = doFlipX.Value
+    public static AnimationClipIndex GetWarriorAttackClip(in Vector3 targetVector, int combo, out bool? doFlipX)
+    {
+        switch (GetCardinalDirection(targetVector))
+        {
+            case CardinalDirection.North:
+                doFlipX = null;
+                return combo % 2 == 0 ? AnimationClipIndex.WarriorSwordUp0 : AnimationClipIndex.WarriorSwordUp1;
+            case CardinalDirection.NorthEast:
+            case CardinalDirection.East:
+            case CardinalDirection.SouthEast:
+                doFlipX = false;
+                return combo % 2 == 0 ? AnimationClipIndex.WarriorSwordRight0 : AnimationClipIndex.WarriorSwordRight1;
+            case CardinalDirection.South:
+                doFlipX = null;
+                return combo % 2 == 0 ? AnimationClipIndex.WarriorSwordDown0 : AnimationClipIndex.WarriorSwordDown1;
+            case CardinalDirection.SouthWest:
+            case CardinalDirection.West:
+            case CardinalDirection.NorthWest:
+                doFlipX = true;
+                return combo % 2 == 0 ? AnimationClipIndex.WarriorSwordRight0 : AnimationClipIndex.WarriorSwordRight1;
+
+            default:
+                doFlipX = null;
+                return AnimationClipIndex.WarriorStand;
+        }
+    }
+
+    public static CardinalDirection GetCardinalDirection(in Vector3 vector)
+    {
+        float tan = vector.y / vector.x;
+        if (!float.IsFinite(tan))
+        {
+            return 0f <= vector.y ? CardinalDirection.North : CardinalDirection.South;
+        }
+        else if (0f < vector.x)
+        {
+            if (2.41421356237f < tan)
+                return CardinalDirection.North;
+            else if (0.41421356237f < tan)
+                return CardinalDirection.NorthEast;
+            else if (-0.41421356237f < tan)
+                return CardinalDirection.East;
+            else if (-2.41421356237f < tan)
+                return CardinalDirection.SouthEast;
+            else
+                return CardinalDirection.South;
+        }
+        else
+        {
+            if (2.41421356237f < tan)
+                return CardinalDirection.South;
+            else if (0.41421356237f < tan)
+                return CardinalDirection.SouthWest;
+            else if (-0.41421356237f < tan)
+                return CardinalDirection.West;
+            else if (-2.41421356237f < tan)
+                return CardinalDirection.NorthWest;
+            else
+                return CardinalDirection.North;
+        }
+    }
+}
