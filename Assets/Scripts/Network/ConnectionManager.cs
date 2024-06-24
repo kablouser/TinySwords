@@ -35,11 +35,11 @@ public class ConnectionManager : MonoBehaviour
         NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnectedCallback;
     }
 
-    public void StartHost(string password, int port)
+    public void StartHost(string ipAddress, int port, string password)
     {
         this.password = password;
         var transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
-        transport.ConnectionData = new ConnectionAddressData { Port = (ushort)port, ServerListenAddress = string.Empty };
+        transport.ConnectionData = new ConnectionAddressData { Port = (ushort)port, ServerListenAddress = ipAddress };
         NetworkManager.Singleton.StartHost();
         SceneLoader.NetworkLoadScene(SceneLoader.Scene.Lobby);
     }

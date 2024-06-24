@@ -25,7 +25,7 @@ public class MainMenu : MonoBehaviour
 
         hostGameButton.onClick.AddListener(() =>
         {
-            ConnectionManager.Instance.StartHost(password, Convert.ToInt32(port));
+            ConnectionManager.Instance.StartHost(ipAddress, Convert.ToInt32(port), password);
         });
 
         joinGameButton.onClick.AddListener(() =>
