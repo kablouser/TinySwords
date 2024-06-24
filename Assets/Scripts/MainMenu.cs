@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -25,7 +26,7 @@ public class MainMenu : MonoBehaviour
 
         hostGameButton.onClick.AddListener(() =>
         {
-            ConnectionManager.Instance.StartHost(ipAddress, Convert.ToInt32(port), password);
+            ConnectionManager.Instance.StartHost(Convert.ToInt32(port), password);
         });
 
         joinGameButton.onClick.AddListener(() =>
@@ -47,5 +48,14 @@ public class MainMenu : MonoBehaviour
         {
             this.password = Input;
         });
+    }
+
+    private void OnDestroy()
+    {
+        hostGameButton.onClick.RemoveAllListeners();
+        joinGameButton.onClick.RemoveAllListeners();
+        ipAdressInput.onValueChanged.RemoveAllListeners();
+        portInput.onValueChanged.RemoveAllListeners();
+        passwordInput.onValueChanged.RemoveAllListeners();
     }
 }

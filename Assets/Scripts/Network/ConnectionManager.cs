@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Net;
+using System.Net.Sockets;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using UnityEngine;
@@ -35,11 +36,11 @@ public class ConnectionManager : MonoBehaviour
         NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnectedCallback;
     }
 
-    public void StartHost(string ipAddress, int port, string password)
+    public void StartHost(int port, string password)
     {
         this.password = password;
         var transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
-        transport.ConnectionData = new ConnectionAddressData { Port = (ushort)port, ServerListenAddress = ipAddress };
+        transport.ConnectionData = new ConnectionAddressData { Port = (ushort)port, ServerListenAddress = GetLocalIP() }; //Setting ServerListenAddress to 0.0.0.0 works too
         NetworkManager.Singleton.StartHost();
         SceneLoader.NetworkLoadScene(SceneLoader.Scene.Lobby);
     }
@@ -103,5 +104,22 @@ public class ConnectionManager : MonoBehaviour
     {
         NetworkManager.Singleton.Shutdown();
         SceneLoader.LoadScene(SceneLoader.Scene.MainMenu);
+    }
+
+    //This is one way of many ways to get the local ip, will need more research to know what is the best way
+    private string GetLocalIP()
+    {
+        try
+        {
+            using Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0);
+            socket.Connect("8.8.8.8", 65530);
+            IPEndPoint endPoint = socket.LocalEndPoint as IPEndPoint;
+            return endPoint.Address.ToString();
+        }
+        catch(Exception ex)
+        {
+            //Return local host if no connection
+            return "127.0.0.1";
+        }
     }
 }
