@@ -1,10 +1,12 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Net;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using UnityEngine;
 using static Unity.Netcode.Transports.UTP.UnityTransport;
+using static UnityEngine.RuleTile.TilingRuleOutput;
 
 public class ConnectionManager : MonoBehaviour
 {
@@ -33,9 +35,11 @@ public class ConnectionManager : MonoBehaviour
         NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnectedCallback;
     }
 
-    public void StartHost(string password)
+    public void StartHost(string password, int port)
     {
         this.password = password;
+        var transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
+        transport.ConnectionData = new ConnectionAddressData { Port = (ushort)port, ServerListenAddress = string.Empty };
         NetworkManager.Singleton.StartHost();
         SceneLoader.NetworkLoadScene(SceneLoader.Scene.Lobby);
     }
