@@ -103,7 +103,7 @@ public class TriangulationTest : MonoBehaviour
     [ContextMenu("_Run")]
     public void Run()
     {
-        UnityEditor.Undo.RecordObject(this, "TriangulationTest");
+        //UnityEditor.Undo.RecordObject(this, "TriangulationTest");
         vertices = new List<Vector2>(input);
         if (triangles == null)
             triangles = new List<int>();
