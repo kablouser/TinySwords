@@ -8,15 +8,18 @@ public enum IDType
 }
 
 [Serializable]
-public struct ID
+public struct ID : IEquatable<ID>
 {
     public IDType type;
     public int index;
     public int version;
 
-    public static bool IsSame(in ID a, in ID b)
+    bool IEquatable<ID>.Equals(ID other)
     {
-        return a.type == b.type && a.index == b.index && a.version == b.version;
+        return
+            type == other.type &&
+            index == other.index &&
+            version == other.version;
     }
 
     public static bool operator ==(in ID a, in ID b)
@@ -33,6 +36,18 @@ public struct ID
             a.type != b.type ||
             a.index != b.index ||
             a.version != b.version;
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(type, index, version);
+    }
+
+    public override bool Equals(object obj)
+    {
+        // avoid this at all costs, it boxes structs unnessarily
+        // try to use IEquatable<ID>.Equals() as an alternative
+        throw new NotImplementedException();
     }
 }
 
